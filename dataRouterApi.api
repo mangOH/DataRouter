@@ -1,0 +1,162 @@
+//------------------------------------------------------------------------------------------------------------------
+/**
+ * Data Router data types
+ */
+//------------------------------------------------------------------------------------------------------------------
+ENUM DataType
+{
+  BOOLEAN,
+  INTEGER,
+  FLOAT,
+  STRING,
+};
+
+//------------------------------------------------------------------------------------------------------------------
+/**
+ * Data Router storage types
+ */
+//------------------------------------------------------------------------------------------------------------------
+ENUM Storage
+{
+  CACHE,
+  PERSIST,
+  PERSIST_ENCRYPTED,
+};
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Session start to send updates
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION SessionStart
+(
+    string 		url[128] IN,		///< Air Vantage URL
+    string              password[128] IN,       ///< Air Vantage application model password
+    uint8               pushAv,                 ///< Air Vantage push flag
+    Storage             storage                 ///< Data persist storage
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Session end
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION SessionEnd();
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Write boolean data (key, value) to workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION WriteBoolean
+(
+    string 		key[128] IN,		///< Data key
+    bool 		value IN,		///< Data value
+    uint32 		timestamp IN  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Write integer data (key, value) to workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION WriteInteger
+(
+    string 		key[128] IN,		///< Data key
+    int32 		value IN,		///< Data value
+    uint32 		timestamp IN  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Write float data (key, value) to workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION WriteFloat
+(
+    string 		key[128] IN,		///< Data key
+    float 		value IN,		///< Data value
+    uint32 		timestamp IN  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Write string data (key, value) to workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION WriteString
+(
+    string 		key[128] IN,		///< Data key
+    string 		value[128] IN,		///< Data value
+    uint32 		timestamp IN  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Read string data (key, value) from workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION ReadBoolean
+(
+    string 		key[128] IN,		///< Data key
+    bool 		value OUT,		///< Data value
+    uint32 		timestamp OUT  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Read string data (key, value) from workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION ReadInteger
+(
+    string 		key[128] IN,		///< Data key
+    int32 		value OUT,		///< Data value
+    uint32 		timestamp OUT  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Read string data (key, value) from workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION ReadFloat
+(
+    string 		key[128] IN,		///< Data key
+    float 		value OUT,		///< Data value
+    uint32 		timestamp OUT  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Read string data (key, value) from workflow manager
+ */
+//--------------------------------------------------------------------------------------------------
+FUNCTION ReadString
+(
+    string 		key[128] IN,		///< Data key
+    string 		value[128] OUT,		///< Data value
+    uint32 		timestamp OUT  	        ///< Timestamp of the data
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Handler for data value changes
+ */
+//--------------------------------------------------------------------------------------------------
+HANDLER DataUpdateHandler
+(
+    DataType            type IN,                ///< Data type
+    string 		key[128] IN		///< Data key
+);
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * This event provides information on data value changes
+ */
+//--------------------------------------------------------------------------------------------------
+EVENT DataUpdate
+(
+    string 		key[128] IN,		///< Data key
+    handler             DataUpdateHandler       ///< Data update handler function
+);

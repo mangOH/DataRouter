@@ -1,0 +1,27 @@
+sources:
+{
+	swi_mangoh_data_router.c
+        swi_mangoh_data_router_db.c
+        swi_mangoh_data_router_mqtt.c
+        swi_mangoh_data_router_lwm2m.c
+}
+
+provides:
+{
+    api:
+    {
+        dataRouterApi.api
+    }
+}
+
+requires:
+{
+    api:
+    {
+        mqttApi.api
+        supervisor/le_appInfo.api
+        le_avdata.api
+        le_secStore.api
+        le_cfg.api
+    }
+}
