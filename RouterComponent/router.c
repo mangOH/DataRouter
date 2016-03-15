@@ -1,6 +1,6 @@
 #include "interfaces.h"
 #include "legato.h"
-#include "swi_mangoh_data_router.h"
+#include "router.h"
 
 static void swi_mangoh_data_router_SigTermEventHandler(int);
 static le_result_t swi_mangoh_data_router_getClientAppId(char[], size_t);
@@ -44,16 +44,16 @@ static void swi_mangoh_data_router_selectAvProtocol(const char* value)
   LE_ASSERT(value);
   LE_DEBUG("AV protocol value('%s')", value);
 
-  if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_MQTT_APP_NAME)) 
+  if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_MQTT_APP_NAME))
   {
     LE_DEBUG("AV protocol MQTT");
     dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT;
   }
-  else if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_LWM2M_APP_NAME)) 
+  else if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_LWM2M_APP_NAME))
   {
     LE_DEBUG("AV protocol LWM2M");
     dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M;
-  } 
+  }
 }
 
 void swi_mangoh_data_router_notifySubscribers(const char* appId, const swi_mangoh_data_router_dbItem_t* dbItem)
@@ -82,7 +82,7 @@ void swi_mangoh_data_router_notifySubscribers(const char* appId, const swi_mango
         LE_DEBUG("subscriber('%s') NO data update handler key('%s')", subscriberElem->subscriber->appId, dbItem->data.key);
       }
     }
- 
+
     linkPtr = le_sls_PeekNext(&dbItem->subscribers, linkPtr);
   }
 }
@@ -143,7 +143,7 @@ void dataRouter_SessionStart(const char* urlAsset, const char* password, uint8_t
       LE_ERROR("le_hashmap_Put() failed");
       goto cleanup;
     }
-        
+
     LE_DEBUG("added session('%s')", appName);
   }
   else
@@ -458,7 +458,7 @@ void dataRouter_WriteString(const char* key, const char* value, uint32_t timesta
     swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTER_STRING);
     swi_mangoh_data_router_db_setStringValue(dbItem, value);
     swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
-    
+
     if (session->pushAv)
     {
       switch (dataRouter.protocolType)
@@ -706,7 +706,7 @@ dataRouter_DataUpdateHandlerRef_t dataRouter_AddDataUpdateHandler(const char* ke
         goto cleanup;
       }
     }
-  
+
     le_sls_Link_t* linkPtr = le_sls_Peek(&dbItem->subscribers);
     while (linkPtr)
     {
@@ -815,7 +815,7 @@ void dataRouter_RemoveDataUpdateHandler(dataRouter_DataUpdateHandlerRef_t addHan
           LE_DEBUG("key('%s') remove data handler", dataUpdateHndlr->key);
           dataUpdateHndlr = le_hashmap_Remove(subscriberElem->subscriber->dataUpdateHndlrs, dataUpdateHndlr->key);
 
-          if (le_hashmap_isEmpty(subscriberElem->subscriber->dataUpdateHndlrs)) 
+          if (le_hashmap_isEmpty(subscriberElem->subscriber->dataUpdateHndlrs))
           {
             LE_DEBUG("key('%s') remove subscriber('%s')", dataUpdateHndlr->key, appName);
             linkPtr = le_sls_Pop(&dbItem->subscribers);

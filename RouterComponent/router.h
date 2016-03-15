@@ -1,5 +1,5 @@
 /*
- * @file swi_mangoh_data_router.h
+ * @file router.h
  *
  * Data router module.
  *
@@ -11,9 +11,9 @@
  */
 #include "legato.h"
 #include "interfaces.h"
-#include "swi_mangoh_data_router_db.h"
-#include "swi_mangoh_data_router_lwm2m.h"
-#include "swi_mangoh_data_router_mqtt.h"
+#include "db.h"
+#include "lwm2m.h"
+#include "mqtt.h"
 
 #ifndef SWI_MANGOH_DATA_ROUTER_INCLUDE_GUARD
 #define SWI_MANGOH_DATA_ROUTER_INCLUDE_GUARD
@@ -41,12 +41,12 @@ typedef enum _swi_mangoh_data_router_avProtocol_e
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_session_t
 {
-  char                                 appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];           ///< Application ID
-  dataRouter_Storage_t	               storageType;                                        ///< Data storage
-  uint8_t	                       pushAv;                                             ///< Push -> AV flag
+  char                                  appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];   ///< Application ID
+  dataRouter_Storage_t                  storageType;                                ///< Data storage
+  uint8_t                               pushAv;                                     ///< Push -> AV flag
   union {
-    swi_mangoh_data_router_mqtt_t      mqtt;                                               ///< MQTT protocol -> AV
-    swi_mangoh_data_router_avsvc_t     avsvc;                                              ///< Air Vantage Serivce -> AV
+    swi_mangoh_data_router_mqtt_t       mqtt;                                       ///< MQTT protocol -> AV
+    swi_mangoh_data_router_avsvc_t      avsvc;                                      ///< Air Vantage Serivce -> AV
   };
 } swi_mangoh_data_router_session_t;
 
@@ -57,10 +57,10 @@ typedef struct _swi_mangoh_data_router_session_t
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_dataUpdateHndlr_t
 {
-  char                                   appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];         ///< Application ID
-  char                                   key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];          ///< Data key
-  dataRouter_DataUpdateHandlerFunc_t     handler;                                          ///< Application data update handler function
-  void*                                  context;                                          ///< Application context
+  char                                  appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];   ///< Application ID
+  char                                  key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];    ///< Data key
+  dataRouter_DataUpdateHandlerFunc_t    handler;                                    ///< Application data update handler function
+  void*                                 context;                                    ///< Application context
 } swi_mangoh_data_router_dataUpdateHndlr_t;
 
 //------------------------------------------------------------------------------------------------------------------
@@ -70,8 +70,8 @@ typedef struct _swi_mangoh_data_router_dataUpdateHndlr_t
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_subscriber_t
 {
-  char                                  appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];          ///< Application ID
-  le_hashmap_Ref_t                      dataUpdateHndlrs;                                   ///< Data update handlers
+  char                                  appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];   ///< Application ID
+  le_hashmap_Ref_t                      dataUpdateHndlrs;                           ///< Data update handlers
 } swi_mangoh_data_router_subscriber_t;
 
 //------------------------------------------------------------------------------------------------------------------
@@ -81,8 +81,8 @@ typedef struct _swi_mangoh_data_router_subscriber_t
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_subscriberLink_t
 {
-  swi_mangoh_data_router_subscriber_t*  subscriber;                                         ///< Element subscriber data
-  le_sls_Link_t                         link;                                               ///< Linked list link to next element
+  swi_mangoh_data_router_subscriber_t*  subscriber;                                 ///< Element subscriber data
+  le_sls_Link_t                         link;                                       ///< Linked list link to next element
 } swi_mangoh_data_router_subscriberLink_t;
 
 //------------------------------------------------------------------------------------------------------------------
@@ -92,9 +92,9 @@ typedef struct _swi_mangoh_data_router_subscriberLink_t
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_t
 {
-  le_hashmap_Ref_t                      sessions;                                           ///< Data sessions
-  swi_mangoh_data_router_db_t           db;                                                 ///< Database module
-  swi_mangoh_data_router_avProtocol_e   protocolType;                                       ///< AV push protocol
+  le_hashmap_Ref_t                      sessions;                                   ///< Data sessions
+  swi_mangoh_data_router_db_t           db;                                         ///< Database module
+  swi_mangoh_data_router_avProtocol_e   protocolType;                               ///< AV push protocol
 } swi_mangoh_data_router_t;
 
 void swi_mangoh_data_router_notifySubscribers(const char*, const swi_mangoh_data_router_dbItem_t*);

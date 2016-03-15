@@ -1,9 +1,9 @@
 sources:
 {
-	swi_mangoh_data_router.c
-        swi_mangoh_data_router_db.c
-        swi_mangoh_data_router_mqtt.c
-        swi_mangoh_data_router_lwm2m.c
+    router.c
+    db.c
+    mqtt.c
+    lwm2m.c
 }
 
 provides:

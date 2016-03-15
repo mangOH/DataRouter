@@ -1,7 +1,8 @@
 #include "interfaces.h"
 #include "legato.h"
-#include "swi_mangoh_data_router.h"
-#include "swi_mangoh_data_router_mqtt.h"
+
+#include "router.h"
+#include "mqtt.h"
 
 static void swi_mangoh_data_router_mqttIncomingMsgHdlr(const char*, const char*, const char*, const char*, void*);
 static void swi_mangoh_data_router_mqttSessionStateHdlr(bool, int32_t, int32_t, void*);
@@ -206,7 +207,7 @@ void swi_mangoh_data_router_mqttWrite(swi_mangoh_data_router_dbItem_t* dbItem, s
   if (mqtt->connected)
   {
     char value[SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN] = {0};
-    int32_t error = 0; 
+    int32_t error = 0;
 
     switch (dbItem->data.type)
     {
@@ -284,7 +285,6 @@ bool swi_mangoh_data_router_mqttSessionEnd(swi_mangoh_data_router_mqtt_t* mqtt)
     LE_DEBUG("disconnect MQTT session");
     mqtt_Disconnect();
 
-      
     LE_DEBUG("remove MQTT session");
     mqtt_RemoveSessionStateHandler(mqtt->sessionStateHdlrRef);
     mqtt_RemoveIncomingMessageHandler(mqtt->incomingMsgHdlrRef);

@@ -1,5 +1,5 @@
 /*
- * @file swi_mangoh_data_router.h
+ * @file router.h
  *
  * Data router module.
  *

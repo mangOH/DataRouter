@@ -1,7 +1,8 @@
 #include "interfaces.h"
 #include "legato.h"
-#include "swi_mangoh_data_router_db.h"
-#include "swi_mangoh_data_router_lwm2m.h"
+
+#include "db.h"
+#include "lwm2m.h"
 
 static void swi_mangoh_data_router_avSvcFieldEventHandler(le_avdata_AssetInstanceRef_t, const char*, void*);
 
@@ -17,7 +18,7 @@ static void swi_mangoh_data_router_avSvcFieldEventHandler(le_avdata_AssetInstanc
   {
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(avsvc->db, fieldName);
     LE_ASSERT(dbItem);
-    
+
     switch(dbItem->data.type)
     {
     case DATAROUTER_BOOLEAN:
@@ -52,7 +53,7 @@ void swi_mangoh_data_router_avSvcSessionStart(const char* asset, swi_mangoh_data
   strcpy(avsvc->asset, asset);
   avsvc->db = db;
   avsvc->assetInstanceRef = le_avdata_Create(avsvc->asset);
-  avsvc->fieldEventHndlrs = le_hashmap_Create(SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_NAME, SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_SIZE, 
+  avsvc->fieldEventHndlrs = le_hashmap_Create(SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_NAME, SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_SIZE,
       le_hashmap_HashString, le_hashmap_EqualsString);
 }
 

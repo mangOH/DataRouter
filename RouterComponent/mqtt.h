@@ -1,5 +1,5 @@
 /*
- * @file swi_mangoh_data_router_mqtt.h
+ * @file mqtt.h
  *
  * Data router module.
  *
@@ -11,7 +11,8 @@
  */
 #include "legato.h"
 #include "interfaces.h"
-#include "swi_mangoh_data_router_db.h"
+
+#include "db.h"
 
 #ifndef SWI_MANGOH_DATA_ROUTER_MQTT_INCLUDE_GUARD
 #define SWI_MANGOH_DATA_ROUTER_MQTT_INCLUDE_GUARD

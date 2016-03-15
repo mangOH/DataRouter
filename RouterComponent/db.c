@@ -1,6 +1,6 @@
 #include "interfaces.h"
 #include "legato.h"
-#include "swi_mangoh_data_router_db.h"
+#include "db.h"
 
 static void swi_mangoh_data_router_db_restorePersistedData(swi_mangoh_data_router_db_t*);
 static void swi_mangoh_data_router_db_restoreEncryptedData(swi_mangoh_data_router_db_t*);
@@ -107,7 +107,7 @@ static void swi_mangoh_data_router_db_restorePersistedData(swi_mangoh_data_route
         LE_ERROR("ERROR le_cfg_GetString() failed(%d)", res);
         goto cleanup;
       }
- 
+
       LE_DEBUG("restore(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.sValue);
       break;
     }
