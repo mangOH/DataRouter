@@ -30,10 +30,10 @@ ENUM Storage
 //--------------------------------------------------------------------------------------------------
 FUNCTION SessionStart
 (
-    string 		url[128] IN,		///< Air Vantage URL
-    string              password[128] IN,       ///< Air Vantage application model password
-    uint8               pushAv,                 ///< Air Vantage push flag
-    Storage             storage                 ///< Data persist storage
+    string      url[128] IN,        ///< Air Vantage URL
+    string      password[128] IN,   ///< Air Vantage application model password
+    uint8       pushAv,             ///< Air Vantage push flag
+    Storage     storage             ///< Data persist storage
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -50,9 +50,9 @@ FUNCTION SessionEnd();
 //--------------------------------------------------------------------------------------------------
 FUNCTION WriteBoolean
 (
-    string 		key[128] IN,		///< Data key
-    bool 		value IN,		///< Data value
-    uint32 		timestamp IN  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    bool        value IN,           ///< Data value
+    uint32      timestamp IN        ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -62,9 +62,9 @@ FUNCTION WriteBoolean
 //--------------------------------------------------------------------------------------------------
 FUNCTION WriteInteger
 (
-    string 		key[128] IN,		///< Data key
-    int32 		value IN,		///< Data value
-    uint32 		timestamp IN  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    int32       value IN,           ///< Data value
+    uint32      timestamp IN        ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -74,9 +74,9 @@ FUNCTION WriteInteger
 //--------------------------------------------------------------------------------------------------
 FUNCTION WriteFloat
 (
-    string 		key[128] IN,		///< Data key
-    float 		value IN,		///< Data value
-    uint32 		timestamp IN  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    float       value IN,           ///< Data value
+    uint32      timestamp IN        ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -86,9 +86,9 @@ FUNCTION WriteFloat
 //--------------------------------------------------------------------------------------------------
 FUNCTION WriteString
 (
-    string 		key[128] IN,		///< Data key
-    string 		value[128] IN,		///< Data value
-    uint32 		timestamp IN  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    string      value[128] IN,      ///< Data value
+    uint32      timestamp IN        ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -98,9 +98,9 @@ FUNCTION WriteString
 //--------------------------------------------------------------------------------------------------
 FUNCTION ReadBoolean
 (
-    string 		key[128] IN,		///< Data key
-    bool 		value OUT,		///< Data value
-    uint32 		timestamp OUT  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    bool        value OUT,          ///< Data value
+    uint32      timestamp OUT       ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -110,9 +110,9 @@ FUNCTION ReadBoolean
 //--------------------------------------------------------------------------------------------------
 FUNCTION ReadInteger
 (
-    string 		key[128] IN,		///< Data key
-    int32 		value OUT,		///< Data value
-    uint32 		timestamp OUT  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    int32       value OUT,          ///< Data value
+    uint32      timestamp OUT       ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -122,9 +122,9 @@ FUNCTION ReadInteger
 //--------------------------------------------------------------------------------------------------
 FUNCTION ReadFloat
 (
-    string 		key[128] IN,		///< Data key
-    float 		value OUT,		///< Data value
-    uint32 		timestamp OUT  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    float       value OUT,          ///< Data value
+    uint32      timestamp OUT       ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -134,9 +134,9 @@ FUNCTION ReadFloat
 //--------------------------------------------------------------------------------------------------
 FUNCTION ReadString
 (
-    string 		key[128] IN,		///< Data key
-    string 		value[128] OUT,		///< Data value
-    uint32 		timestamp OUT  	        ///< Timestamp of the data
+    string      key[128] IN,        ///< Data key
+    string      value[128] OUT,     ///< Data value
+    uint32      timestamp OUT       ///< Timestamp of the data
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -146,8 +146,8 @@ FUNCTION ReadString
 //--------------------------------------------------------------------------------------------------
 HANDLER DataUpdateHandler
 (
-    DataType            type IN,                ///< Data type
-    string 		key[128] IN		///< Data key
+    DataType    type IN,            ///< Data type
+    string      key[128] IN         ///< Data key
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -157,6 +157,7 @@ HANDLER DataUpdateHandler
 //--------------------------------------------------------------------------------------------------
 EVENT DataUpdate
 (
-    string 		key[128] IN,		///< Data key
-    handler             DataUpdateHandler       ///< Data update handler function
+    string      key[128] IN,        ///< Data key
+    handler     DataUpdateHandler   ///< Data update handler function
 );
+

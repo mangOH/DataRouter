@@ -1,6 +1,6 @@
 #include "interfaces.h"
 #include "legato.h"
-#include "swi_mangoh_data_router.h"
+#include "router.h"
 
 static void swi_mangoh_data_router_SigTermEventHandler(int);
 static le_result_t swi_mangoh_data_router_getClientAppId(char[], size_t);
@@ -18,7 +18,7 @@ static le_result_t swi_mangoh_data_router_getClientAppId(char appName[], size_t 
   pid_t processId = {0};
   le_result_t res = LE_OK;
 
-  res = le_msg_GetClientProcessId(dataRouterApi_GetClientSessionRef(), &processId);
+  res = le_msg_GetClientProcessId(dataRouter_GetClientSessionRef(), &processId);
   if (res != LE_OK)
   {
     LE_ERROR("ERROR le_msg_GetClientProcessId() failed(%d)", res);
@@ -44,16 +44,16 @@ static void swi_mangoh_data_router_selectAvProtocol(const char* value)
   LE_ASSERT(value);
   LE_DEBUG("AV protocol value('%s')", value);
 
-  if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_MQTT_APP_NAME)) 
+  if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_MQTT_APP_NAME))
   {
     LE_DEBUG("AV protocol MQTT");
     dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT;
   }
-  else if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_LWM2M_APP_NAME)) 
+  else if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_LWM2M_APP_NAME))
   {
     LE_DEBUG("AV protocol LWM2M");
     dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M;
-  } 
+  }
 }
 
 void swi_mangoh_data_router_notifySubscribers(const char* appId, const swi_mangoh_data_router_dbItem_t* dbItem)
@@ -82,12 +82,12 @@ void swi_mangoh_data_router_notifySubscribers(const char* appId, const swi_mango
         LE_DEBUG("subscriber('%s') NO data update handler key('%s')", subscriberElem->subscriber->appId, dbItem->data.key);
       }
     }
- 
+
     linkPtr = le_sls_PeekNext(&dbItem->subscribers, linkPtr);
   }
 }
 
-void dataRouterApi_SessionStart(const char* urlAsset, const char* password, uint8_t pushAv, dataRouterApi_Storage_t storage)
+void dataRouter_SessionStart(const char* urlAsset, const char* password, uint8_t pushAv, dataRouter_Storage_t storage)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -143,7 +143,7 @@ void dataRouterApi_SessionStart(const char* urlAsset, const char* password, uint
       LE_ERROR("le_hashmap_Put() failed");
       goto cleanup;
     }
-        
+
     LE_DEBUG("added session('%s')", appName);
   }
   else
@@ -155,7 +155,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_SessionEnd(void)
+void dataRouter_SessionEnd(void)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -218,7 +218,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_WriteBoolean(const char* key, bool value, uint32_t timestamp)
+void dataRouter_WriteBoolean(const char* key, bool value, uint32_t timestamp)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -250,7 +250,7 @@ void dataRouterApi_WriteBoolean(const char* key, bool value, uint32_t timestamp)
     }
 
     swi_mangoh_data_router_db_setStorageType(dbItem, session->storageType);
-    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTERAPI_BOOLEAN);
+    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTER_BOOLEAN);
     swi_mangoh_data_router_db_setBooleanValue(dbItem, value);
     swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
 
@@ -286,7 +286,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_WriteInteger(const char* key, int32_t value, uint32_t timestamp)
+void dataRouter_WriteInteger(const char* key, int32_t value, uint32_t timestamp)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -318,7 +318,7 @@ void dataRouterApi_WriteInteger(const char* key, int32_t value, uint32_t timesta
     }
 
     swi_mangoh_data_router_db_setStorageType(dbItem, session->storageType);
-    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTERAPI_INTEGER);
+    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTER_INTEGER);
     swi_mangoh_data_router_db_setIntegerValue(dbItem, value);
     swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
 
@@ -354,7 +354,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_WriteFloat(const char* key, float value, uint32_t timestamp)
+void dataRouter_WriteFloat(const char* key, float value, uint32_t timestamp)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -386,7 +386,7 @@ void dataRouterApi_WriteFloat(const char* key, float value, uint32_t timestamp)
     }
 
     swi_mangoh_data_router_db_setStorageType(dbItem, session->storageType);
-    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTERAPI_FLOAT);
+    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTER_FLOAT);
     swi_mangoh_data_router_db_setFloatValue(dbItem, value);
     swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
 
@@ -422,7 +422,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_WriteString(const char* key, const char* value, uint32_t timestamp)
+void dataRouter_WriteString(const char* key, const char* value, uint32_t timestamp)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -455,10 +455,10 @@ void dataRouterApi_WriteString(const char* key, const char* value, uint32_t time
     }
 
     swi_mangoh_data_router_db_setStorageType(dbItem, session->storageType);
-    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTERAPI_STRING);
+    swi_mangoh_data_router_db_setDataType(dbItem, DATAROUTER_STRING);
     swi_mangoh_data_router_db_setStringValue(dbItem, value);
     swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
-    
+
     if (session->pushAv)
     {
       switch (dataRouter.protocolType)
@@ -491,7 +491,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_ReadBoolean(const char* key, bool* valuePtr, uint32_t* timestampPtr)
+void dataRouter_ReadBoolean(const char* key, bool* valuePtr, uint32_t* timestampPtr)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -512,7 +512,7 @@ void dataRouterApi_ReadBoolean(const char* key, bool* valuePtr, uint32_t* timest
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (dbItem)
     {
-      if (dbItem->data.type == DATAROUTERAPI_BOOLEAN)
+      if (dbItem->data.type == DATAROUTER_BOOLEAN)
       {
         memcpy(valuePtr, &dbItem->data.bValue, sizeof(dbItem->data.bValue));
         memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
@@ -537,7 +537,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_ReadInteger(const char* key, int32_t* valuePtr, uint32_t* timestampPtr)
+void dataRouter_ReadInteger(const char* key, int32_t* valuePtr, uint32_t* timestampPtr)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -558,7 +558,7 @@ void dataRouterApi_ReadInteger(const char* key, int32_t* valuePtr, uint32_t* tim
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (dbItem)
     {
-      if (dbItem->data.type == DATAROUTERAPI_INTEGER)
+      if (dbItem->data.type == DATAROUTER_INTEGER)
       {
         memcpy(valuePtr, &dbItem->data.iValue, sizeof(dbItem->data.iValue));
         memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
@@ -583,7 +583,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_ReadFloat(const char* key, float* valuePtr, uint32_t* timestampPtr)
+void dataRouter_ReadFloat(const char* key, float* valuePtr, uint32_t* timestampPtr)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -604,7 +604,7 @@ void dataRouterApi_ReadFloat(const char* key, float* valuePtr, uint32_t* timesta
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (dbItem)
     {
-      if (dbItem->data.type == DATAROUTERAPI_FLOAT)
+      if (dbItem->data.type == DATAROUTER_FLOAT)
       {
         memcpy(valuePtr, &dbItem->data.fValue, sizeof(dbItem->data.fValue));
         memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
@@ -629,7 +629,7 @@ cleanup:
   return;
 }
 
-void dataRouterApi_ReadString(const char* key, char* valuePtr, size_t numValues, uint32_t* timestampPtr)
+void dataRouter_ReadString(const char* key, char* valuePtr, size_t numValues, uint32_t* timestampPtr)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -650,7 +650,7 @@ void dataRouterApi_ReadString(const char* key, char* valuePtr, size_t numValues,
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (dbItem)
     {
-      if (dbItem->data.type == DATAROUTERAPI_STRING)
+      if (dbItem->data.type == DATAROUTER_STRING)
       {
         memset(valuePtr, 0, numValues);
         strcpy(valuePtr, dbItem->data.sValue);
@@ -677,7 +677,7 @@ cleanup:
   return;
 }
 
-dataRouterApi_DataUpdateHandlerRef_t dataRouterApi_AddDataUpdateHandler(const char* key, dataRouterApi_DataUpdateHandlerFunc_t handlerPtr, void* contextPtr)
+dataRouter_DataUpdateHandlerRef_t dataRouter_AddDataUpdateHandler(const char* key, dataRouter_DataUpdateHandlerFunc_t handlerPtr, void* contextPtr)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   swi_mangoh_data_router_subscriber_t* subscriber = NULL;
@@ -706,7 +706,7 @@ dataRouterApi_DataUpdateHandlerRef_t dataRouterApi_AddDataUpdateHandler(const ch
         goto cleanup;
       }
     }
-  
+
     le_sls_Link_t* linkPtr = le_sls_Peek(&dbItem->subscribers);
     while (linkPtr)
     {
@@ -780,10 +780,10 @@ dataRouterApi_DataUpdateHandlerRef_t dataRouterApi_AddDataUpdateHandler(const ch
   }
 
 cleanup:
-  return (dataRouterApi_DataUpdateHandlerRef_t)(dataUpdateHndlr);
+  return (dataRouter_DataUpdateHandlerRef_t)(dataUpdateHndlr);
 }
 
-void dataRouterApi_RemoveDataUpdateHandler(dataRouterApi_DataUpdateHandlerRef_t addHandlerRef)
+void dataRouter_RemoveDataUpdateHandler(dataRouter_DataUpdateHandlerRef_t addHandlerRef)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -815,7 +815,7 @@ void dataRouterApi_RemoveDataUpdateHandler(dataRouterApi_DataUpdateHandlerRef_t 
           LE_DEBUG("key('%s') remove data handler", dataUpdateHndlr->key);
           dataUpdateHndlr = le_hashmap_Remove(subscriberElem->subscriber->dataUpdateHndlrs, dataUpdateHndlr->key);
 
-          if (le_hashmap_isEmpty(subscriberElem->subscriber->dataUpdateHndlrs)) 
+          if (le_hashmap_isEmpty(subscriberElem->subscriber->dataUpdateHndlrs))
           {
             LE_DEBUG("key('%s') remove subscriber('%s')", dataUpdateHndlr->key, appName);
             linkPtr = le_sls_Pop(&dbItem->subscribers);

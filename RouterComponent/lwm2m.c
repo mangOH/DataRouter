@@ -1,7 +1,8 @@
 #include "interfaces.h"
 #include "legato.h"
-#include "swi_mangoh_data_router_db.h"
-#include "swi_mangoh_data_router_lwm2m.h"
+
+#include "db.h"
+#include "lwm2m.h"
 
 static void swi_mangoh_data_router_avSvcFieldEventHandler(le_avdata_AssetInstanceRef_t, const char*, void*);
 
@@ -17,25 +18,25 @@ static void swi_mangoh_data_router_avSvcFieldEventHandler(le_avdata_AssetInstanc
   {
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(avsvc->db, fieldName);
     LE_ASSERT(dbItem);
-    
+
     switch(dbItem->data.type)
     {
-    case DATAROUTERAPI_BOOLEAN:
+    case DATAROUTER_BOOLEAN:
       le_avdata_GetBool(avsvc->assetInstanceRef, fieldName, &dbItem->data.bValue);
       LE_DEBUG("--> key('%s'), value('%s')", dbItem->data.key, dbItem->data.bValue ? "true":"false");
       break;
 
-    case DATAROUTERAPI_INTEGER:
+    case DATAROUTER_INTEGER:
       le_avdata_GetInt(avsvc->assetInstanceRef, fieldName, &dbItem->data.iValue);
       LE_DEBUG("--> key('%s'), value(%d)", dbItem->data.key, dbItem->data.iValue);
       break;
 
-    case DATAROUTERAPI_FLOAT:
+    case DATAROUTER_FLOAT:
       le_avdata_GetFloat(avsvc->assetInstanceRef, fieldName, &dbItem->data.fValue);
       LE_DEBUG("--> key('%s'), value(%f)", dbItem->data.key, dbItem->data.fValue);
       break;
 
-    case DATAROUTERAPI_STRING:
+    case DATAROUTER_STRING:
       le_avdata_GetString(avsvc->assetInstanceRef, fieldName, dbItem->data.sValue, sizeof(dbItem->data.sValue));
       LE_DEBUG("--> key('%s'), value('%s')", dbItem->data.key, dbItem->data.sValue);
       break;
@@ -52,7 +53,7 @@ void swi_mangoh_data_router_avSvcSessionStart(const char* asset, swi_mangoh_data
   strcpy(avsvc->asset, asset);
   avsvc->db = db;
   avsvc->assetInstanceRef = le_avdata_Create(avsvc->asset);
-  avsvc->fieldEventHndlrs = le_hashmap_Create(SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_NAME, SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_SIZE, 
+  avsvc->fieldEventHndlrs = le_hashmap_Create(SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_NAME, SWI_MANGOH_DATA_ROUTER_LWM2M_FIELD_HANDLERS_MAP_SIZE,
       le_hashmap_HashString, le_hashmap_EqualsString);
 }
 
@@ -63,20 +64,20 @@ void swi_mangoh_data_router_avSvcWrite(swi_mangoh_data_router_dbItem_t* dbItem, 
 
   switch (dbItem->data.type)
   {
-  case DATAROUTERAPI_BOOLEAN:
+  case DATAROUTER_BOOLEAN:
     LE_DEBUG("AVSVC <-- key('%s'), value('%s'), timestamp(%lu)", dbItem->data.key, dbItem->data.bValue ? "true":"false", dbItem->data.timestamp);
     le_avdata_SetBool(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.bValue);
     break;
 
-  case DATAROUTERAPI_INTEGER:
+  case DATAROUTER_INTEGER:
     LE_DEBUG("AVSVC <-- key('%s'), value(%d), timestamp(%lu)", dbItem->data.key, dbItem->data.iValue, dbItem->data.timestamp);
     le_avdata_SetInt(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.iValue);
 
-  case DATAROUTERAPI_FLOAT:
+  case DATAROUTER_FLOAT:
     LE_DEBUG("AVSVC <-- key('%s'), value(%f), timestamp(%lu)", dbItem->data.key, dbItem->data.fValue, dbItem->data.timestamp);
     le_avdata_SetFloat(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.fValue);
 
-  case DATAROUTERAPI_STRING:
+  case DATAROUTER_STRING:
     LE_DEBUG("AVSVC <-- key('%s'), value('%s'), timestamp(%lu)", dbItem->data.key, dbItem->data.sValue, dbItem->data.timestamp);
     le_avdata_SetString(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.sValue);
     break;

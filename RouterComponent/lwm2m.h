@@ -1,5 +1,5 @@
 /*
- * @file swi_mangoh_data_router.h
+ * @file lwm2m.h
  *
  * Data router module.
  *

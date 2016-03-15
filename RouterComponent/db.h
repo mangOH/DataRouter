@@ -1,5 +1,5 @@
 /*
- * @file swi_mangoh_data_router.h
+ * @file router.h
  *
  * Data router module.
  *
@@ -40,7 +40,7 @@
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_data_t
 {
-  dataRouterApi_DataType_t              type;                                               ///< Data type
+  dataRouter_DataType_t                 type;                                               ///< Data type
   char                                  key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];            ///< Data key
   union {
     char                                sValue[SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN];        ///< Data string value
@@ -60,7 +60,7 @@ typedef struct _swi_mangoh_data_router_dbItem_t
 {
   swi_mangoh_data_router_data_t         data;                                               ///< Data value
   le_sls_List_t                         subscribers;                                        ///< Data update subscribers
-  dataRouterApi_Storage_t	        storageType;                                        ///< Data storage
+  dataRouter_Storage_t	                storageType;                                        ///< Data storage
 } swi_mangoh_data_router_dbItem_t;
 
 //------------------------------------------------------------------------------------------------------------------
@@ -74,8 +74,8 @@ typedef struct _swi_mangoh_data_router_db_t
 } swi_mangoh_data_router_db_t;
 
 swi_mangoh_data_router_dbItem_t* swi_mangoh_data_router_db_getDataItem(swi_mangoh_data_router_db_t*, const char*);
-void swi_mangoh_data_router_db_setStorageType(swi_mangoh_data_router_dbItem_t*, dataRouterApi_Storage_t);
-void swi_mangoh_data_router_db_setDataType(swi_mangoh_data_router_dbItem_t*, dataRouterApi_DataType_t);
+void swi_mangoh_data_router_db_setStorageType(swi_mangoh_data_router_dbItem_t*, dataRouter_Storage_t);
+void swi_mangoh_data_router_db_setDataType(swi_mangoh_data_router_dbItem_t*, dataRouter_DataType_t);
 void swi_mangoh_data_router_db_setBooleanValue(swi_mangoh_data_router_dbItem_t*, bool);
 void swi_mangoh_data_router_db_setIntegerValue(swi_mangoh_data_router_dbItem_t*, int32_t);
 void swi_mangoh_data_router_db_setFloatValue(swi_mangoh_data_router_dbItem_t*, float);

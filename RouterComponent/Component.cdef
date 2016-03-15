@@ -1,0 +1,27 @@
+sources:
+{
+    router.c
+    db.c
+    mqtt.c
+    lwm2m.c
+}
+
+provides:
+{
+    api:
+    {
+        dataRouter.api
+    }
+}
+
+requires:
+{
+    api:
+    {
+        mqtt.api
+        supervisor/le_appInfo.api
+        le_avdata.api
+        le_secStore.api
+        le_cfg.api
+    }
+}

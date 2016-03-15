@@ -1,5 +1,5 @@
 /*
- * @file swi_mangoh_data_router.h
+ * @file router.h
  *
  * Data router module.
  *
@@ -11,9 +11,9 @@
  */
 #include "legato.h"
 #include "interfaces.h"
-#include "swi_mangoh_data_router_db.h"
-#include "swi_mangoh_data_router_lwm2m.h"
-#include "swi_mangoh_data_router_mqtt.h"
+#include "db.h"
+#include "lwm2m.h"
+#include "mqtt.h"
 
 #ifndef SWI_MANGOH_DATA_ROUTER_INCLUDE_GUARD
 #define SWI_MANGOH_DATA_ROUTER_INCLUDE_GUARD
@@ -42,7 +42,7 @@ typedef enum _swi_mangoh_data_router_avProtocol_e
 typedef struct _swi_mangoh_data_router_session_t
 {
   char                                 appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];           ///< Application ID
-  dataRouterApi_Storage_t	       storageType;                                        ///< Data storage
+  dataRouter_Storage_t	       storageType;                                        ///< Data storage
   uint8_t	                       pushAv;                                             ///< Push -> AV flag
   union {
     swi_mangoh_data_router_mqtt_t      mqtt;                                               ///< MQTT protocol -> AV
@@ -59,7 +59,7 @@ typedef struct _swi_mangoh_data_router_dataUpdateHndlr_t
 {
   char                                   appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];         ///< Application ID
   char                                   key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];          ///< Data key
-  dataRouterApi_DataUpdateHandlerFunc_t  handler;                                          ///< Application data update handler function
+  dataRouter_DataUpdateHandlerFunc_t  handler;                                          ///< Application data update handler function
   void*                                  context;                                          ///< Application context
 } swi_mangoh_data_router_dataUpdateHndlr_t;
 

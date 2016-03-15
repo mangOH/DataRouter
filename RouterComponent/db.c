@@ -1,6 +1,6 @@
 #include "interfaces.h"
 #include "legato.h"
-#include "swi_mangoh_data_router_db.h"
+#include "db.h"
 
 static void swi_mangoh_data_router_db_restorePersistedData(swi_mangoh_data_router_db_t*);
 static void swi_mangoh_data_router_db_restoreEncryptedData(swi_mangoh_data_router_db_t*);
@@ -85,29 +85,29 @@ static void swi_mangoh_data_router_db_restorePersistedData(swi_mangoh_data_route
     dbItem->data.type = le_cfg_GetInt(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_TYPE, 0);
     switch (dbItem->data.type)
     {
-    case DATAROUTERAPI_BOOLEAN:
+    case DATAROUTER_BOOLEAN:
       dbItem->data.bValue = le_cfg_GetBool(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_VALUE, false);
       LE_DEBUG("restore(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.bValue ? "true":"false");
       break;
 
-    case DATAROUTERAPI_INTEGER:
+    case DATAROUTER_INTEGER:
       dbItem->data.iValue = le_cfg_GetInt(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_VALUE, 0);
       LE_DEBUG("restore(%u) key('%s'), value(%d)", dbItem->storageType, dbItem->data.key, dbItem->data.iValue);
       break;
 
-    case DATAROUTERAPI_FLOAT:
+    case DATAROUTER_FLOAT:
       dbItem->data.fValue = le_cfg_GetFloat(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_VALUE, 0.0);
       LE_DEBUG("restore(%u) key('%s'), value(%f)", dbItem->storageType, dbItem->data.key, dbItem->data.fValue);
       break;
 
-    case DATAROUTERAPI_STRING:
+    case DATAROUTER_STRING:
       res = le_cfg_GetString(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_VALUE, dbItem->data.sValue, sizeof(dbItem->data.sValue), "");
       if (res != LE_OK)
       {
         LE_ERROR("ERROR le_cfg_GetString() failed(%d)", res);
         goto cleanup;
       }
- 
+
       LE_DEBUG("restore(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.sValue);
       break;
     }
@@ -162,13 +162,13 @@ swi_mangoh_data_router_dbItem_t* swi_mangoh_data_router_db_getDataItem(swi_mango
   return le_hashmap_Get(db->database, key);
 }
 
-void swi_mangoh_data_router_db_setStorageType(swi_mangoh_data_router_dbItem_t* dbItem, dataRouterApi_Storage_t storageType)
+void swi_mangoh_data_router_db_setStorageType(swi_mangoh_data_router_dbItem_t* dbItem, dataRouter_Storage_t storageType)
 {
   LE_ASSERT(dbItem);
   dbItem->storageType = storageType;
 }
 
-void swi_mangoh_data_router_db_setDataType(swi_mangoh_data_router_dbItem_t* dbItem, dataRouterApi_DataType_t dataType)
+void swi_mangoh_data_router_db_setDataType(swi_mangoh_data_router_dbItem_t* dbItem, dataRouter_DataType_t dataType)
 {
   LE_ASSERT(dbItem);
   dbItem->data.type = dataType;
@@ -239,7 +239,7 @@ void swi_mangoh_data_router_db_destroy(swi_mangoh_data_router_db_t* db)
       {
         switch (dbItem->storageType)
         {
-        case DATAROUTERAPI_PERSIST:
+        case DATAROUTER_PERSIST:
         {
           char path[SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN] = {0};
 
@@ -252,22 +252,22 @@ void swi_mangoh_data_router_db_destroy(swi_mangoh_data_router_db_t* db)
           snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, dbItem->data.key, SWI_MANGOH_DATA_ROUTER_CFG_VALUE);
           switch (dbItem->data.type)
           {
-          case DATAROUTERAPI_BOOLEAN:
+          case DATAROUTER_BOOLEAN:
             LE_DEBUG("store(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.bValue ? "true":"false");
             le_cfg_QuickSetBool(path, dbItem->data.bValue);
             break;
 
-          case DATAROUTERAPI_INTEGER:
+          case DATAROUTER_INTEGER:
             LE_DEBUG("store(%u) key('%s'), value(%d)", dbItem->storageType, dbItem->data.key, dbItem->data.iValue);
             le_cfg_QuickSetInt(path, dbItem->data.iValue);
             break;
 
-          case DATAROUTERAPI_FLOAT:
+          case DATAROUTER_FLOAT:
             LE_DEBUG("store(%u) key('%s'), value(%f)", dbItem->storageType, dbItem->data.key, dbItem->data.fValue);
             le_cfg_QuickSetFloat(path, dbItem->data.fValue);
             break;
 
-          case DATAROUTERAPI_STRING:
+          case DATAROUTER_STRING:
             LE_DEBUG("store(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.sValue);
             le_cfg_QuickSetString(path, dbItem->data.sValue);
             break;
@@ -277,7 +277,7 @@ void swi_mangoh_data_router_db_destroy(swi_mangoh_data_router_db_t* db)
           le_cfg_QuickSetInt(path, dbItem->data.timestamp);
           break;
         }
-        case DATAROUTERAPI_PERSIST_ENCRYPTED:
+        case DATAROUTER_PERSIST_ENCRYPTED:
         {
           res = le_secStore_Write(dbItem->data.key, (const uint8_t*)&dbItem->data, sizeof(swi_mangoh_data_router_data_t));
           if (res != LE_OK)
