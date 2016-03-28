@@ -131,7 +131,7 @@ void swi_mangoh_data_router_mqttReconnect(le_timer_Ref_t timerRef)
   LE_ASSERT(mqtt);
 
   LE_DEBUG("connect -> AV('%s')", mqtt->password);
-  mqttApi_Connect("", mqtt->password);
+  mqttApi_Connect(mqtt->password);
   mqtt->connecting = true;
 }
 
@@ -191,7 +191,7 @@ void swi_mangoh_data_router_mqttSessionStart(const char* appId, const char* url,
   mqttApi_Config(mqtt->url, SWI_MANGOH_DATA_ROUTER_MQTT_PORT_NUMBER, SWI_MANGOH_DATA_ROUTER_MQTT_KEEP_ALIVE, 0);
 
   LE_DEBUG("connect -> AV('%s')", mqtt->password);
-  mqttApi_Connect("", mqtt->password);
+  mqttApi_Connect(mqtt->password);
   mqtt->connecting = true;
 
 cleanup:
