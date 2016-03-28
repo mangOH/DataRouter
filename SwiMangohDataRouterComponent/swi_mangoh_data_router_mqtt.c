@@ -236,12 +236,6 @@ void swi_mangoh_data_router_mqttWrite(swi_mangoh_data_router_dbItem_t* dbItem, s
   }
   else
   {
-    if (mqtt->connecting && !mqtt->disconnect)
-    {
-      LE_DEBUG("retry connect url('%s') -> AV('%s')", mqtt->url, mqtt->password);
-      mqttApi_Connect("", mqtt->password);
-    }
-
     if (le_sls_NumLinks(&mqtt->outstandingRequests) < SWI_MANGOH_DATA_ROUTER_MQTT_QUEUED_REQUESTS_MAX_NUM)
     {
       swi_mangoh_data_router_mqtt_dataLink_t* dataElem = calloc(1, sizeof(swi_mangoh_data_router_mqtt_dataLink_t));

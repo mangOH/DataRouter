@@ -148,7 +148,7 @@ void dataRouterApi_SessionStart(const char* urlAsset, const char* password, uint
   }
   else
   {
-    LE_WARN("ERROR session('%s') exists", appName);
+    LE_WARN("session('%s') exists", appName);
   }
 
 cleanup:
