@@ -23,7 +23,7 @@ processes:
 
 bindings:
 {
-    SwiMangohDataRouter.SwiMangohDataRouterComponent.mqttApi -> mqttClient.mqttApi
+    SwiMangohDataRouter.SwiMangohDataRouterComponent.mqtt -> mqttClient.mqtt
     SwiMangohDataRouter.SwiMangohDataRouterComponent.le_appInfo -> <root>.le_appInfo
     SwiMangohDataRouter.SwiMangohDataRouterComponent.le_avdata -> avcService.le_avdata
     SwiMangohDataRouter.SwiMangohDataRouterComponent.le_secStore -> secStore.le_secStore
@@ -41,6 +41,6 @@ provides:
 {
     api:
     {
-        SwiMangohDataRouter.SwiMangohDataRouterComponent.dataRouterApi
+        SwiMangohDataRouter.SwiMangohDataRouterComponent.dataRouter
     }
 }

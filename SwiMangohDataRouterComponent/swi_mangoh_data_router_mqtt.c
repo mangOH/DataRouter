@@ -26,19 +26,19 @@ static void swi_mangoh_data_router_mqttIncomingMsgHdlr(const char* topic, const 
 
   switch(dbItem->data.type)
   {
-  case DATAROUTERAPI_BOOLEAN:
+  case DATAROUTER_BOOLEAN:
     dbItem->data.bValue = strcmp(value, "true") ? false:true;
     break;
 
-  case DATAROUTERAPI_INTEGER:
+  case DATAROUTER_INTEGER:
     dbItem->data.iValue = atoi(value);
     break;
 
-  case DATAROUTERAPI_FLOAT:
+  case DATAROUTER_FLOAT:
     dbItem->data.fValue = atof(value);
     break;
 
-  case DATAROUTERAPI_STRING:
+  case DATAROUTER_STRING:
     strcpy(dbItem->data.sValue, value);
     break;
   }
@@ -73,28 +73,28 @@ static void swi_mangoh_data_router_mqttSessionStateHdlr(bool isConnected, int32_
 
       switch(dataElem->data->type)
       {
-      case DATAROUTERAPI_BOOLEAN:
+      case DATAROUTER_BOOLEAN:
         snprintf(value, sizeof(value), "%d", dataElem->data->bValue);
         break;
 
-      case DATAROUTERAPI_INTEGER:
+      case DATAROUTER_INTEGER:
         snprintf(value, sizeof(value), "%d", dataElem->data->iValue);
         break;
 
-      case DATAROUTERAPI_FLOAT:
+      case DATAROUTER_FLOAT:
         snprintf(value, sizeof(value), "%f", dataElem->data->fValue);
         break;
 
-      case DATAROUTERAPI_STRING:
+      case DATAROUTER_STRING:
         strcpy(value, dataElem->data->sValue);
         break;
       }
 
       LE_DEBUG("<-- key/value('%s'/'%s')", dataElem->data->key, value);
-      mqttApi_Send(dataElem->data->key, value, &error);
+      mqtt_Send(dataElem->data->key, value, &error);
       if (error)
       {
-        LE_ERROR("mqttApi_Send() failed(%d)", error);
+        LE_ERROR("mqtt_Send() failed(%d)", error);
       }
 
       free(dataElem->data);
@@ -105,7 +105,7 @@ static void swi_mangoh_data_router_mqttSessionStateHdlr(bool isConnected, int32_
     if (mqtt->disconnect)
     {
       LE_DEBUG("disconnect MQTT session");
-      mqttApi_Disconnect();
+      mqtt_Disconnect();
     }
   }
   else
@@ -131,7 +131,7 @@ void swi_mangoh_data_router_mqttReconnect(le_timer_Ref_t timerRef)
   LE_ASSERT(mqtt);
 
   LE_DEBUG("connect -> AV('%s')", mqtt->password);
-  mqttApi_Connect(mqtt->password);
+  mqtt_Connect(mqtt->password);
   mqtt->connecting = true;
 }
 
@@ -168,17 +168,17 @@ void swi_mangoh_data_router_mqttSessionStart(const char* appId, const char* url,
     goto cleanup;
   }
 
-  mqtt->sessionStateHdlrRef = mqttApi_AddSessionStateHandler(swi_mangoh_data_router_mqttSessionStateHdlr, mqtt);
+  mqtt->sessionStateHdlrRef = mqtt_AddSessionStateHandler(swi_mangoh_data_router_mqttSessionStateHdlr, mqtt);
   if (!mqtt->sessionStateHdlrRef)
   {
-    LE_ERROR("ERROR mqttApi_AddSessionStateHandler() failed");
+    LE_ERROR("ERROR mqtt_AddSessionStateHandler() failed");
     goto cleanup;
   }
 
-  mqtt->incomingMsgHdlrRef = mqttApi_AddIncomingMessageHandler(swi_mangoh_data_router_mqttIncomingMsgHdlr, mqtt);
+  mqtt->incomingMsgHdlrRef = mqtt_AddIncomingMessageHandler(swi_mangoh_data_router_mqttIncomingMsgHdlr, mqtt);
   if (!mqtt->incomingMsgHdlrRef)
   {
-    LE_ERROR("ERROR mqttApi_AddIncomingMessageHandler() failed");
+    LE_ERROR("ERROR mqtt_AddIncomingMessageHandler() failed");
     goto cleanup;
   }
 
@@ -188,10 +188,10 @@ void swi_mangoh_data_router_mqttSessionStart(const char* appId, const char* url,
   strcpy(mqtt->password, password);
 
   LE_DEBUG("url('%s')", mqtt->url);
-  mqttApi_Config(mqtt->url, SWI_MANGOH_DATA_ROUTER_MQTT_PORT_NUMBER, SWI_MANGOH_DATA_ROUTER_MQTT_KEEP_ALIVE, 0);
+  mqtt_Config(mqtt->url, SWI_MANGOH_DATA_ROUTER_MQTT_PORT_NUMBER, SWI_MANGOH_DATA_ROUTER_MQTT_KEEP_ALIVE, 0);
 
   LE_DEBUG("connect -> AV('%s')", mqtt->password);
-  mqttApi_Connect(mqtt->password);
+  mqtt_Connect(mqtt->password);
   mqtt->connecting = true;
 
 cleanup:
@@ -210,28 +210,28 @@ void swi_mangoh_data_router_mqttWrite(swi_mangoh_data_router_dbItem_t* dbItem, s
 
     switch (dbItem->data.type)
     {
-    case DATAROUTERAPI_BOOLEAN:
+    case DATAROUTER_BOOLEAN:
       snprintf(value, sizeof(value), "%d", dbItem->data.bValue);
       break;
 
-    case DATAROUTERAPI_INTEGER:
+    case DATAROUTER_INTEGER:
       snprintf(value, sizeof(value), "%d", dbItem->data.iValue);
       break;
 
-    case DATAROUTERAPI_FLOAT:
+    case DATAROUTER_FLOAT:
       snprintf(value, sizeof(value), "%f", dbItem->data.fValue);
       break;
 
-    case DATAROUTERAPI_STRING:
+    case DATAROUTER_STRING:
       strcpy(value, dbItem->data.sValue);
       break;
     }
 
     LE_DEBUG("MQTT <-- key('%s'), value('%s'), timestamp(%lu)", dbItem->data.key, value, dbItem->data.timestamp);
-    mqttApi_Send(dbItem->data.key, value, &error);
+    mqtt_Send(dbItem->data.key, value, &error);
     if (error)
     {
-      LE_ERROR("mqttApi_Send() failed(%d)", error);
+      LE_ERROR("mqtt_Send() failed(%d)", error);
     }
   }
   else
@@ -282,12 +282,12 @@ bool swi_mangoh_data_router_mqttSessionEnd(swi_mangoh_data_router_mqtt_t* mqtt)
   else
   {
     LE_DEBUG("disconnect MQTT session");
-    mqttApi_Disconnect();
+    mqtt_Disconnect();
 
       
     LE_DEBUG("remove MQTT session");
-    mqttApi_RemoveSessionStateHandler(mqtt->sessionStateHdlrRef);
-    mqttApi_RemoveIncomingMessageHandler(mqtt->incomingMsgHdlrRef);
+    mqtt_RemoveSessionStateHandler(mqtt->sessionStateHdlrRef);
+    mqtt_RemoveIncomingMessageHandler(mqtt->incomingMsgHdlrRef);
     le_timer_Delete(mqtt->reconnectTimer);
   }
 

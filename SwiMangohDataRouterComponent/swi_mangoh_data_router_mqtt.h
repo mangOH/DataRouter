@@ -46,8 +46,8 @@ typedef struct _swi_mangoh_data_router_mqtt_t
 {
   char                                  url[SWI_MANGOH_DATA_ROUTER_MQTT_URL_LEN];           ///< Air Vantage URL
   char                                  password[SWI_MANGOH_DATA_ROUTER_MQTT_PASSWORD_LEN]; ///< Air Vantage application model password
-  mqttApi_SessionStateHandlerRef_t      sessionStateHdlrRef;                                ///< MQTT session state callback function
-  mqttApi_IncomingMessageHandlerRef_t   incomingMsgHdlrRef;                                 ///< MQTT incoming data callback function
+  mqtt_SessionStateHandlerRef_t         sessionStateHdlrRef;                                ///< MQTT session state callback function
+  mqtt_IncomingMessageHandlerRef_t      incomingMsgHdlrRef;                                 ///< MQTT incoming data callback function
   le_timer_Ref_t                        reconnectTimer;                                     ///< Reconnect timer
   le_sls_List_t                         outstandingRequests;                                ///< Requests waiting to be forwarded
   swi_mangoh_data_router_db_t*          db;                                                 ///< Database module

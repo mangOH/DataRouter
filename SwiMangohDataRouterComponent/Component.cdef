@@ -10,7 +10,7 @@ provides:
 {
     api:
     {
-        dataRouterApi.api
+        dataRouter.api
     }
 }
 
@@ -18,7 +18,7 @@ requires:
 {
     api:
     {
-        mqttApi.api
+        mqtt.api
         supervisor/le_appInfo.api
         le_avdata.api
         le_secStore.api
