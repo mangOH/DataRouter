@@ -75,7 +75,7 @@ FUNCTION WriteInteger
 FUNCTION WriteFloat
 (
     string      key[128] IN,        ///< Data key
-    double      value IN,           ///< Data value
+    float       value IN,           ///< Data value
     uint32      timestamp IN        ///< Timestamp of the data
 );
 
@@ -123,7 +123,7 @@ FUNCTION ReadInteger
 FUNCTION ReadFloat
 (
     string      key[128] IN,        ///< Data key
-    double      value OUT,          ///< Data value
+    float       value OUT,          ///< Data value
     uint32      timestamp OUT       ///< Timestamp of the data
 );
 

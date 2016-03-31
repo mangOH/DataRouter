@@ -354,7 +354,7 @@ cleanup:
   return;
 }
 
-void dataRouter_WriteFloat(const char* key, double value, uint32_t timestamp)
+void dataRouter_WriteFloat(const char* key, float value, uint32_t timestamp)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
@@ -583,7 +583,7 @@ cleanup:
   return;
 }
 
-void dataRouter_ReadFloat(const char* key, double* valuePtr, uint32_t* timestampPtr)
+void dataRouter_ReadFloat(const char* key, float* valuePtr, uint32_t* timestampPtr)
 {
   char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
   le_result_t res = LE_OK;
