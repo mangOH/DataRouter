@@ -37,10 +37,7 @@ requires:
     }
 }
 
-provides:
+extern:
 {
-    api:
-    {
-        DataRouter.RouterComponent.dataRouter
-    }
+    DataRouter.RouterComponent.dataRouter
 }
