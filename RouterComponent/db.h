@@ -78,7 +78,7 @@ void swi_mangoh_data_router_db_setStorageType(swi_mangoh_data_router_dbItem_t*, 
 void swi_mangoh_data_router_db_setDataType(swi_mangoh_data_router_dbItem_t*, dataRouter_DataType_t);
 void swi_mangoh_data_router_db_setBooleanValue(swi_mangoh_data_router_dbItem_t*, bool);
 void swi_mangoh_data_router_db_setIntegerValue(swi_mangoh_data_router_dbItem_t*, int32_t);
-void swi_mangoh_data_router_db_setFloatValue(swi_mangoh_data_router_dbItem_t*, float);
+void swi_mangoh_data_router_db_setFloatValue(swi_mangoh_data_router_dbItem_t*, double);
 void swi_mangoh_data_router_db_setStringValue(swi_mangoh_data_router_dbItem_t*, const char*);
 void swi_mangoh_data_router_db_setTimestamp(swi_mangoh_data_router_dbItem_t*, uint32_t);
 

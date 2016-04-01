@@ -186,7 +186,7 @@ void swi_mangoh_data_router_db_setIntegerValue(swi_mangoh_data_router_dbItem_t* 
   dbItem->data.iValue = value;
 }
 
-void swi_mangoh_data_router_db_setFloatValue(swi_mangoh_data_router_dbItem_t* dbItem, float value)
+void swi_mangoh_data_router_db_setFloatValue(swi_mangoh_data_router_dbItem_t* dbItem, double value)
 {
   LE_ASSERT(dbItem);
   dbItem->data.fValue = value;
