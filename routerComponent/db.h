@@ -16,7 +16,7 @@
 #define SWI_MANGOH_DATA_ROUTER_DB_INCLUDE_GUARD
 
 #define SWI_MANGOH_DATA_ROUTER_SEC_STORE_BASE_NAME          "Database"
-#define SWI_MANGOH_DATA_ROUTER_SEC_STORE_MAX_KEYS_LEN	     16384
+#define SWI_MANGOH_DATA_ROUTER_SEC_STORE_MAX_KEYS_LEN       16384
 #define SWI_MANGOH_DATA_ROUTER_SEC_STORE_KEYS_SEPARATOR     ","
 
 #define SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME                "/Database"
@@ -44,7 +44,7 @@ typedef struct _swi_mangoh_data_router_data_t
   char                                  key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];            ///< Data key
   union {
     char                                sValue[SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN];        ///< Data string value
-    float                               fValue;
+    double                              fValue;
     int32_t                             iValue;                                             ///< Data integer value
     bool                                bValue;                                             ///< Data boolean values
   };
@@ -60,7 +60,7 @@ typedef struct _swi_mangoh_data_router_dbItem_t
 {
   swi_mangoh_data_router_data_t         data;                                               ///< Data value
   le_sls_List_t                         subscribers;                                        ///< Data update subscribers
-  dataRouter_Storage_t	                storageType;                                        ///< Data storage
+  dataRouter_Storage_t                  storageType;                                        ///< Data storage
 } swi_mangoh_data_router_dbItem_t;
 
 //------------------------------------------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ void swi_mangoh_data_router_db_setStorageType(swi_mangoh_data_router_dbItem_t*, 
 void swi_mangoh_data_router_db_setDataType(swi_mangoh_data_router_dbItem_t*, dataRouter_DataType_t);
 void swi_mangoh_data_router_db_setBooleanValue(swi_mangoh_data_router_dbItem_t*, bool);
 void swi_mangoh_data_router_db_setIntegerValue(swi_mangoh_data_router_dbItem_t*, int32_t);
-void swi_mangoh_data_router_db_setFloatValue(swi_mangoh_data_router_dbItem_t*, float);
+void swi_mangoh_data_router_db_setFloatValue(swi_mangoh_data_router_dbItem_t*, double);
 void swi_mangoh_data_router_db_setStringValue(swi_mangoh_data_router_dbItem_t*, const char*);
 void swi_mangoh_data_router_db_setTimestamp(swi_mangoh_data_router_dbItem_t*, uint32_t);
 
