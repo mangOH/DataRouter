@@ -606,7 +606,7 @@ void dataRouter_ReadFloat(const char* key, float* valuePtr, uint32_t* timestampP
     {
       if (dbItem->data.type == DATAROUTER_FLOAT)
       {
-        memcpy(valuePtr, &dbItem->data.fValue, sizeof(dbItem->data.fValue));
+        *valuePtr = dbItem->data.fValue;
         memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
         LE_DEBUG("app('%s') <-- key('%s'), value(%f), timestamp(%u)", appName, key, *valuePtr, *timestampPtr);
       }

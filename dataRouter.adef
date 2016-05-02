@@ -23,7 +23,7 @@ processes:
 
 bindings:
 {
-    DataRouter.RouterComponent.mqtt -> MqttClient.mqtt
+    DataRouter.RouterComponent.mqtt -> mqttClient.mqtt
     DataRouter.RouterComponent.le_appInfo -> <root>.le_appInfo
     DataRouter.RouterComponent.le_avdata -> avcService.le_avdata
     DataRouter.RouterComponent.le_secStore -> secStore.le_secStore
