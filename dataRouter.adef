@@ -3,14 +3,14 @@ sandboxed: true
 start: auto
 executables:
 {
-    DataRouter = ( RouterComponent )
+    dataRouter = ( routerComponent )
 }
 
 processes:
 {
     run:
     {
-        ( DataRouter )
+        ( dataRouter )
     }
 
     envVars:
@@ -23,10 +23,10 @@ processes:
 
 bindings:
 {
-    DataRouter.RouterComponent.mqtt -> mqttClient.mqtt
-    DataRouter.RouterComponent.le_appInfo -> <root>.le_appInfo
-    DataRouter.RouterComponent.le_avdata -> avcService.le_avdata
-    DataRouter.RouterComponent.le_secStore -> secStore.le_secStore
+    dataRouter.routerComponent.mqtt -> mqttClient.mqtt
+    dataRouter.routerComponent.le_appInfo -> <root>.le_appInfo
+    dataRouter.routerComponent.le_avdata -> avcService.le_avdata
+    dataRouter.routerComponent.le_secStore -> secStore.le_secStore
 }
 
 requires:
@@ -39,5 +39,5 @@ requires:
 
 extern:
 {
-    DataRouter.RouterComponent.dataRouter
+    dataRouter.routerComponent.dataRouter
 }
