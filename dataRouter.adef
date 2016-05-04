@@ -19,6 +19,7 @@ processes:
     }
 
     maxCoreDumpFileBytes: 512K
+    faultAction: restart
 }
 
 bindings:
