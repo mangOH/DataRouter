@@ -13,12 +13,16 @@ static void swi_mangoh_data_router_SigTermEventHandler(int sigNum)
   swi_mangoh_data_router_db_destroy(&dataRouter.db);
 }
 
-static le_result_t swi_mangoh_data_router_getClientAppId(char appName[], size_t len)
+static le_result_t swi_mangoh_data_router_getSessionAppId(
+  le_msg_SessionRef_t sessionRef,
+  char appName[],
+  size_t len
+)
 {
   pid_t processId = {0};
   le_result_t res = LE_OK;
 
-  res = le_msg_GetClientProcessId(dataRouter_GetClientSessionRef(), &processId);
+  res = le_msg_GetClientProcessId(sessionRef, &processId);
   if (res != LE_OK)
   {
     LE_ERROR("ERROR le_msg_GetClientProcessId() failed(%d)", res);
@@ -26,7 +30,7 @@ static le_result_t swi_mangoh_data_router_getClientAppId(char appName[], size_t 
   }
 
   LE_DEBUG("process(%u), len(%u)", processId, len);
-  res = le_appInfo_GetName(processId, appName, len);	
+  res = le_appInfo_GetName(processId, appName, len);
   if (res != LE_OK)
   {
     LE_ERROR("ERROR le_appInfo_GetName() failed(%d)", res);
@@ -37,6 +41,11 @@ static le_result_t swi_mangoh_data_router_getClientAppId(char appName[], size_t 
 
 cleanup:
   return res;
+}
+
+static le_result_t swi_mangoh_data_router_getClientAppId(char appName[], size_t len)
+{
+    return swi_mangoh_data_router_getSessionAppId(dataRouter_GetClientSessionRef(), appName, len);
 }
 
 static void swi_mangoh_data_router_selectAvProtocol(const char* value)
@@ -155,18 +164,8 @@ cleanup:
   return;
 }
 
-void dataRouter_SessionEnd(void)
+static void swi_mangoh_data_router_cleanupSession(const char* appName)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
-  {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
-    goto cleanup;
-  }
-
   LE_DEBUG("lookup session('%s')", appName);
   swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
   if (session && session->pushAv)
@@ -213,6 +212,42 @@ void dataRouter_SessionEnd(void)
   {
     LE_WARN("session('%s') not found", appName);
   }
+
+cleanup:
+
+    return;
+}
+
+static void swi_mangoh_data_router_onSessionClosed(
+  le_msg_SessionRef_t sessionRef, void* contextPtr)
+{
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
+  le_result_t res = LE_OK;
+
+  res = swi_mangoh_data_router_getSessionAppId(sessionRef, appName, sizeof(appName));
+  if (res != LE_OK)
+  {
+    LE_ERROR("ERROR swi_mangoh_data_router_getSessionAppId() failed(%d)", res);
+  }
+  else
+  {
+    swi_mangoh_data_router_cleanupSession(appName);
+  }
+}
+
+void dataRouter_SessionEnd(void)
+{
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
+  le_result_t res = LE_OK;
+
+  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
+  if (res != LE_OK)
+  {
+    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    goto cleanup;
+  }
+
+  swi_mangoh_data_router_cleanupSession(appName);
 
 cleanup:
   return;
@@ -846,13 +881,21 @@ COMPONENT_INIT
 
   swi_mangoh_data_router_db_init(&dataRouter.db);
 
-  dataRouter.sessions = le_hashmap_Create(SWI_MANGOH_DATA_ROUTER_SESSIONS_MAP_NAME, SWI_MANGOH_DATA_ROUTER_SESSIONS_MAP_SIZE, le_hashmap_HashString, le_hashmap_EqualsString);
+  le_msg_AddServiceCloseHandler(
+    dataRouter_GetServiceRef(), swi_mangoh_data_router_onSessionClosed, NULL);
+
+  dataRouter.sessions = le_hashmap_Create(
+    SWI_MANGOH_DATA_ROUTER_SESSIONS_MAP_NAME,
+    SWI_MANGOH_DATA_ROUTER_SESSIONS_MAP_SIZE,
+    le_hashmap_HashString,
+    le_hashmap_EqualsString);
   dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT;
 
   le_sig_Block(SIGTERM);
   le_sig_SetEventHandler(SIGTERM, swi_mangoh_data_router_SigTermEventHandler);
 
-  le_arg_SetStringCallback (swi_mangoh_data_router_selectAvProtocol,
-      SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_PARAM_SHORT_NAME,
-      SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_PARAM_LONG_NAME);	
+  le_arg_SetStringCallback(
+    swi_mangoh_data_router_selectAvProtocol,
+    SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_PARAM_SHORT_NAME,
+    SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_PARAM_LONG_NAME);
 }
