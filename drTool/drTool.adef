@@ -1,0 +1,13 @@
+start: manual
+sandboxed: false
+
+executables:
+{
+    dr = (drTool)
+}
+
+bindings:
+{
+    dr.drTool.dataRouter -> dataRouter.dataRouter
+}
+
