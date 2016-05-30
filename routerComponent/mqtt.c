@@ -72,33 +72,32 @@ static void swi_mangoh_data_router_mqttSessionStateHdlr(bool isConnected, int32_
       swi_mangoh_data_router_mqtt_dataLink_t* dataElem = CONTAINER_OF(linkPtr, swi_mangoh_data_router_mqtt_dataLink_t, link);
       int32_t error = 0;
 
-      switch(dataElem->data->type)
+      switch(dataElem->data.type)
       {
       case DATAROUTER_BOOLEAN:
-        snprintf(value, sizeof(value), "%d", dataElem->data->bValue);
+        snprintf(value, sizeof(value), "%d", dataElem->data.bValue);
         break;
 
       case DATAROUTER_INTEGER:
-        snprintf(value, sizeof(value), "%d", dataElem->data->iValue);
+        snprintf(value, sizeof(value), "%d", dataElem->data.iValue);
         break;
 
       case DATAROUTER_FLOAT:
-        snprintf(value, sizeof(value), "%f", dataElem->data->fValue);
+        snprintf(value, sizeof(value), "%f", dataElem->data.fValue);
         break;
 
       case DATAROUTER_STRING:
-        strcpy(value, dataElem->data->sValue);
+        strcpy(value, dataElem->data.sValue);
         break;
       }
 
-      LE_DEBUG("<-- key/value('%s'/'%s')", dataElem->data->key, value);
-      mqtt_Send(dataElem->data->key, value, &error);
+      LE_DEBUG("<-- key/value('%s'/'%s')", dataElem->key, value);
+      mqtt_Send(dataElem->key, value, &error);
       if (error)
       {
         LE_ERROR("mqtt_Send() failed(%d)", error);
       }
 
-      free(dataElem->data);
       free(dataElem);
       linkPtr = le_sls_Pop(&mqtt->outstandingRequests);
     }
@@ -199,7 +198,7 @@ cleanup:
   return;
 }
 
-void swi_mangoh_data_router_mqttWrite(swi_mangoh_data_router_dbItem_t* dbItem, swi_mangoh_data_router_mqtt_t* mqtt)
+void swi_mangoh_data_router_mqttWrite(const char* key, swi_mangoh_data_router_dbItem_t* dbItem, swi_mangoh_data_router_mqtt_t* mqtt)
 {
   LE_ASSERT(dbItem);
   LE_ASSERT(mqtt);
@@ -228,8 +227,8 @@ void swi_mangoh_data_router_mqttWrite(swi_mangoh_data_router_dbItem_t* dbItem, s
       break;
     }
 
-    LE_DEBUG("MQTT <-- key('%s'), value('%s'), timestamp(%lu)", dbItem->data.key, value, dbItem->data.timestamp);
-    mqtt_Send(dbItem->data.key, value, &error);
+    LE_DEBUG("MQTT <-- key('%s'), value('%s'), timestamp(%lu)", key, value, dbItem->data.timestamp);
+    mqtt_Send(key, value, &error);
     if (error)
     {
       LE_ERROR("mqtt_Send() failed(%d)", error);
@@ -246,21 +245,15 @@ void swi_mangoh_data_router_mqttWrite(swi_mangoh_data_router_dbItem_t* dbItem, s
         goto cleanup;
       }
 
-      dataElem->data = calloc(1, sizeof(swi_mangoh_data_router_data_t));
-      if (!dataElem->data)
-      {
-        LE_ERROR("ERROR calloc() failed");
-        goto cleanup;
-      }
-
-      LE_DEBUG("queue('%s')", dbItem->data.key);
-      memcpy(dataElem->data, &dbItem->data, sizeof(swi_mangoh_data_router_data_t));
+      LE_DEBUG("queue('%s')", key);
+      strcpy(dataElem->key, key);
+      memcpy(&dataElem->data, &dbItem->data, sizeof(swi_mangoh_data_router_data_t));
       dataElem->link = LE_SLS_LINK_INIT;
       le_sls_Queue(&mqtt->outstandingRequests, &dataElem->link);
     }
     else
     {
-      LE_WARN("cannot queue('%s') data update", dbItem->data.key);
+      LE_WARN("cannot queue('%s') data update", key);
     }
   }
 
@@ -274,7 +267,7 @@ bool swi_mangoh_data_router_mqttSessionEnd(swi_mangoh_data_router_mqtt_t* mqtt)
 
   LE_ASSERT(mqtt);
 
-  if (mqtt->connecting && le_sls_IsEmpty(&mqtt->outstandingRequests))
+  if (mqtt->connecting && !le_sls_IsEmpty(&mqtt->outstandingRequests))
   {
     LE_DEBUG("delayed MQTT session disconnect");
     mqtt->disconnect = true;

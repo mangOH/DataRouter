@@ -7,6 +7,7 @@ static void swi_mangoh_data_router_db_restoreEncryptedData(swi_mangoh_data_route
 
 static void swi_mangoh_data_router_db_restoreEncryptedData(swi_mangoh_data_router_db_t* db)
 {
+  LE_DEBUG("Restoring encrypted data");
   char* encryptedKeys = NULL;
   swi_mangoh_data_router_dbItem_t* dbItem = NULL;
   size_t len = 0;
@@ -59,6 +60,7 @@ cleanup:
 
 static void swi_mangoh_data_router_db_restorePersistedData(swi_mangoh_data_router_db_t* db)
 {
+  LE_DEBUG("Restoring persisted data");
   le_cfg_IteratorRef_t iterRef = le_cfg_CreateReadTxn(SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME);
   le_result_t res = le_cfg_GoToFirstChild(iterRef);
 
@@ -87,17 +89,17 @@ static void swi_mangoh_data_router_db_restorePersistedData(swi_mangoh_data_route
     {
     case DATAROUTER_BOOLEAN:
       dbItem->data.bValue = le_cfg_GetBool(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_VALUE, false);
-      LE_DEBUG("restore(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.bValue ? "true":"false");
+      LE_DEBUG("restore(%u) key('%s'), value('%s')", dbItem->storageType, key, dbItem->data.bValue ? "true":"false");
       break;
 
     case DATAROUTER_INTEGER:
       dbItem->data.iValue = le_cfg_GetInt(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_VALUE, 0);
-      LE_DEBUG("restore(%u) key('%s'), value(%d)", dbItem->storageType, dbItem->data.key, dbItem->data.iValue);
+      LE_DEBUG("restore(%u) key('%s'), value(%d)", dbItem->storageType, key, dbItem->data.iValue);
       break;
 
     case DATAROUTER_FLOAT:
       dbItem->data.fValue = le_cfg_GetFloat(iterRef, SWI_MANGOH_DATA_ROUTER_CFG_VALUE, 0.0);
-      LE_DEBUG("restore(%u) key('%s'), value(%f)", dbItem->storageType, dbItem->data.key, dbItem->data.fValue);
+      LE_DEBUG("restore(%u) key('%s'), value(%f)", dbItem->storageType, key, dbItem->data.fValue);
       break;
 
     case DATAROUTER_STRING:
@@ -108,7 +110,7 @@ static void swi_mangoh_data_router_db_restorePersistedData(swi_mangoh_data_route
         goto cleanup;
       }
 
-      LE_DEBUG("restore(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.sValue);
+      LE_DEBUG("restore(%u) key('%s'), value('%s')", dbItem->storageType, key, dbItem->data.sValue);
       break;
     }
 
@@ -139,15 +141,19 @@ swi_mangoh_data_router_dbItem_t* swi_mangoh_data_router_db_createDataItem(swi_ma
     goto cleanup;
   }
 
-  LE_DEBUG("create data item('%s')", key);
-  strcpy(dbItem->data.key, key);
-  dbItem->subscribers = LE_SLS_LIST_INIT;
+  char* allocKey = calloc(1, strnlen(key, SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN) + 1);
+  LE_ASSERT(allocKey);
+  strcpy(allocKey, key);
 
-  ret = le_hashmap_Put(db->database, dbItem->data.key, dbItem);
+  LE_DEBUG("create data item('%s')", allocKey);
+  dbItem->handlers = LE_SLS_LIST_INIT;
+
+  ret = le_hashmap_Put(db->database, allocKey, dbItem);
   if (ret)
   {
-    LE_WARN("le_hashmap_Put() replaced key(''%s')", dbItem->data.key);
+    LE_WARN("le_hashmap_Put() replaced key(''%s')", allocKey);
     free(ret);
+    free(allocKey); // Existing key string is used
     goto cleanup;
   }
 
@@ -213,6 +219,8 @@ void swi_mangoh_data_router_db_init(swi_mangoh_data_router_db_t* db)
   swi_mangoh_data_router_db_restoreEncryptedData(db);
 }
 
+// NOTE: This function doesn't actually free the memory associated with the keys or values in the
+// db.  The process is exiting anyway so the memory will be reclaimed by the OS.
 void swi_mangoh_data_router_db_destroy(swi_mangoh_data_router_db_t* db)
 {
   char* encryptedKeys = NULL;
@@ -234,8 +242,9 @@ void swi_mangoh_data_router_db_destroy(swi_mangoh_data_router_db_t* db)
     int32_t res = le_hashmap_NextNode(iter);
     while (res == LE_OK)
     {
+      const char* key = (const char*)le_hashmap_GetKey(iter);
       swi_mangoh_data_router_dbItem_t* dbItem = (swi_mangoh_data_router_dbItem_t*)le_hashmap_GetValue(iter);
-      if (dbItem)
+      if (key && dbItem)
       {
         switch (dbItem->storageType)
         {
@@ -243,57 +252,58 @@ void swi_mangoh_data_router_db_destroy(swi_mangoh_data_router_db_t* db)
         {
           char path[SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN] = {0};
 
-          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, dbItem->data.key, SWI_MANGOH_DATA_ROUTER_CFG_KEY);
-          le_cfg_QuickSetString(path, dbItem->data.key);
+          // TODO: is this necessary?  seems like we are associating the key with the key?
+          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, key, SWI_MANGOH_DATA_ROUTER_CFG_KEY);
+          le_cfg_QuickSetString(path, key);
 
-          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, dbItem->data.key, SWI_MANGOH_DATA_ROUTER_CFG_TYPE);
+          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, key, SWI_MANGOH_DATA_ROUTER_CFG_TYPE);
           le_cfg_QuickSetInt(path, dbItem->data.type);
 
-          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, dbItem->data.key, SWI_MANGOH_DATA_ROUTER_CFG_VALUE);
+          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, key, SWI_MANGOH_DATA_ROUTER_CFG_VALUE);
           switch (dbItem->data.type)
           {
           case DATAROUTER_BOOLEAN:
-            LE_DEBUG("store(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.bValue ? "true":"false");
+            LE_DEBUG("store(%u) key('%s'), value('%s')", dbItem->storageType, key, dbItem->data.bValue ? "true":"false");
             le_cfg_QuickSetBool(path, dbItem->data.bValue);
             break;
 
           case DATAROUTER_INTEGER:
-            LE_DEBUG("store(%u) key('%s'), value(%d)", dbItem->storageType, dbItem->data.key, dbItem->data.iValue);
+            LE_DEBUG("store(%u) key('%s'), value(%d)", dbItem->storageType, key, dbItem->data.iValue);
             le_cfg_QuickSetInt(path, dbItem->data.iValue);
             break;
 
           case DATAROUTER_FLOAT:
-            LE_DEBUG("store(%u) key('%s'), value(%f)", dbItem->storageType, dbItem->data.key, dbItem->data.fValue);
+            LE_DEBUG("store(%u) key('%s'), value(%f)", dbItem->storageType, key, dbItem->data.fValue);
             le_cfg_QuickSetFloat(path, dbItem->data.fValue);
             break;
 
           case DATAROUTER_STRING:
-            LE_DEBUG("store(%u) key('%s'), value('%s')", dbItem->storageType, dbItem->data.key, dbItem->data.sValue);
+            LE_DEBUG("store(%u) key('%s'), value('%s')", dbItem->storageType, key, dbItem->data.sValue);
             le_cfg_QuickSetString(path, dbItem->data.sValue);
             break;
           }
 
-          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, dbItem->data.key, SWI_MANGOH_DATA_ROUTER_CFG_TIMESTAMP);
+          snprintf(path, SWI_MANGOH_DATA_ROUTER_CFG_MAX_PATH_LEN, "%s/%s/%s", SWI_MANGOH_DATA_ROUTER_CFG_BASE_NAME, key, SWI_MANGOH_DATA_ROUTER_CFG_TIMESTAMP);
           le_cfg_QuickSetInt(path, dbItem->data.timestamp);
           break;
         }
         case DATAROUTER_PERSIST_ENCRYPTED:
         {
-          res = le_secStore_Write(dbItem->data.key, (const uint8_t*)&dbItem->data, sizeof(swi_mangoh_data_router_data_t));
+          res = le_secStore_Write(key, (const uint8_t*)&dbItem->data, sizeof(swi_mangoh_data_router_data_t));
           if (res != LE_OK)
           {
             LE_ERROR("ERROR le_secStore_Write() failed(%d)", res);
             goto cleanup;
           }
 
-          uint32_t keyLen = strlen(dbItem->data.key);
+          uint32_t keyLen = strlen(key);
           if (encryptedKeysLen + keyLen > SWI_MANGOH_DATA_ROUTER_SEC_STORE_MAX_KEYS_LEN)
           {
             LE_ERROR("ERROR maximum keys reached(%u > %u)", encryptedKeysLen + keyLen, SWI_MANGOH_DATA_ROUTER_SEC_STORE_MAX_KEYS_LEN);
             goto cleanup;
           }
 
-          strcat(encryptedKeys, dbItem->data.key);
+          strcat(encryptedKeys, key);
           strcat(encryptedKeys, SWI_MANGOH_DATA_ROUTER_SEC_STORE_KEYS_SEPARATOR);
           encryptedKeysLen += keyLen + 1;
           break;

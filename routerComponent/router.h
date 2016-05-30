@@ -41,12 +41,11 @@ typedef enum _swi_mangoh_data_router_avProtocol_e
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_session_t
 {
-  char                                  appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];   ///< Application ID
-  dataRouter_Storage_t                  storageType;                                ///< Data storage
-  uint8_t                               pushAv;                                     ///< Push -> AV flag
+  dataRouter_Storage_t                  storageType;                                  ///< Data storage
+  bool                                  pushAv;                                       ///< Push -> AV flag
   union {
-    swi_mangoh_data_router_mqtt_t       mqtt;                                       ///< MQTT protocol -> AV
-    swi_mangoh_data_router_avsvc_t      avsvc;                                      ///< Air Vantage Serivce -> AV
+    swi_mangoh_data_router_mqtt_t       mqtt;                                         ///< MQTT protocol -> AV
+    swi_mangoh_data_router_avsvc_t      avsvc;                                        ///< Air Vantage Serivce -> AV
   };
 } swi_mangoh_data_router_session_t;
 
@@ -55,35 +54,20 @@ typedef struct _swi_mangoh_data_router_session_t
  * Data Router data update handler
  */
 //------------------------------------------------------------------------------------------------------------------
-typedef struct _swi_mangoh_data_router_dataUpdateHndlr_t
+typedef struct
 {
-  char                                  appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];   ///< Application ID
-  char                                  key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];    ///< Data key
-  dataRouter_DataUpdateHandlerFunc_t    handler;                                    ///< Application data update handler function
-  void*                                 context;                                    ///< Application context
-} swi_mangoh_data_router_dataUpdateHndlr_t;
-
-//------------------------------------------------------------------------------------------------------------------
-/**
- * Data Router subscriber
- */
-//------------------------------------------------------------------------------------------------------------------
-typedef struct _swi_mangoh_data_router_subscriber_t
-{
-  char                                  appId[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN];   ///< Application ID
-  le_hashmap_Ref_t                      dataUpdateHndlrs;                           ///< Data update handlers
-} swi_mangoh_data_router_subscriber_t;
-
-//------------------------------------------------------------------------------------------------------------------
-/**
- * Data Router subscribers list element value
- */
-//------------------------------------------------------------------------------------------------------------------
-typedef struct _swi_mangoh_data_router_subscriberLink_t
-{
-  swi_mangoh_data_router_subscriber_t*  subscriber;                                 ///< Element subscriber data
-  le_sls_Link_t                         link;                                       ///< Linked list link to next element
-} swi_mangoh_data_router_subscriberLink_t;
+  dataRouter_DataUpdateHandlerFunc_t handler;          ///< Application data update handler function
+  void*                              context;          ///< Application context
+  le_msg_SessionRef_t                clientSessionRef; ///< Session that the handler is associated with
+  swi_mangoh_data_router_dbItem_t*   dbItemInstalledOn; ///< A pointer to the db item that this
+                                                        ///  handler is installed on.  This is
+                                                        /// required so that a pointer to this
+                                                        /// object can be passed to
+                                                        /// RemoveDataUpdateHandler and that
+                                                        /// function is able to locate this node
+                                                        /// and purge it from the list.
+  le_sls_Link_t                      next;              ///< Linked list link to next element
+} swi_mangoh_data_router_dataUpdateHandler_t;
 
 //------------------------------------------------------------------------------------------------------------------
 /**
@@ -92,9 +76,10 @@ typedef struct _swi_mangoh_data_router_subscriberLink_t
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_t
 {
-  le_hashmap_Ref_t                      sessions;                                   ///< Data sessions
-  swi_mangoh_data_router_db_t           db;                                         ///< Database module
-  swi_mangoh_data_router_avProtocol_e   protocolType;                               ///< AV push protocol
+  le_hashmap_Ref_t                    sessions;     ///< Data sessions :: map<le_msg_SessionRef_t,
+                                                    ///  swi_mangoh_data_router_session_t>
+  swi_mangoh_data_router_db_t         db;           ///< Database module
+  swi_mangoh_data_router_avProtocol_e protocolType; ///< AV push protocol
 } swi_mangoh_data_router_t;
 
 void swi_mangoh_data_router_notifySubscribers(const char*, const swi_mangoh_data_router_dbItem_t*);

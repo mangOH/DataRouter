@@ -28,7 +28,6 @@
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_avSvcFieldEventUpdateHndlr_t
 {
-  char                                   key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];          ///< Data key
   le_avdata_FieldEventHandlerRef_t       handlerRef;                                       ///< Field event handler reference
   void*                                  context;                                          ///< Application context
 } swi_mangoh_data_router_avSvcFieldEventUpdateHndlr_t;
@@ -48,6 +47,6 @@ typedef struct _swi_mangoh_data_router_avsvc_t
 
 void swi_mangoh_data_router_avSvcSessionStart(const char* asset, swi_mangoh_data_router_avsvc_t*, swi_mangoh_data_router_db_t*);
 void swi_mangoh_data_router_avSvcSessionEnd(swi_mangoh_data_router_avsvc_t*);
-void swi_mangoh_data_router_avSvcWrite(swi_mangoh_data_router_dbItem_t* dbItem, swi_mangoh_data_router_avsvc_t*);
+void swi_mangoh_data_router_avSvcWrite(const char* key, swi_mangoh_data_router_dbItem_t* dbItem, swi_mangoh_data_router_avsvc_t*);
 
 #endif

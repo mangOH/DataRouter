@@ -4,6 +4,7 @@ sources:
     db.c
     mqtt.c
     lwm2m.c
+    list_helpers.c
 }
 
 provides:
@@ -24,4 +25,9 @@ requires:
         le_secStore.api
         le_cfg.api
     }
+}
+
+cflags:
+{
+    "-std=c99"
 }

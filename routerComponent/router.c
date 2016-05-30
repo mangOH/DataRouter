@@ -1,40 +1,64 @@
 #include "interfaces.h"
 #include "legato.h"
 #include "router.h"
+#include "list_helpers.h"
 
+// Used to provide the session reference to match against when removing from the list of update
+// handlers.
+static le_msg_SessionRef_t ComparisonClientSessionRef;
+static swi_mangoh_data_router_t dataRouter;
+
+static bool IsUpdateHandlerForSession(le_sls_Link_t* link);
+static void FreeDataUpdateHandlerListNode(le_sls_Link_t* link);
 static void swi_mangoh_data_router_SigTermEventHandler(int);
-static le_result_t swi_mangoh_data_router_getClientAppId(char[], size_t);
+static le_result_t swi_mangoh_data_router_getClientPidAndAppName(pid_t*, char[], size_t);
 static void swi_mangoh_data_router_selectAvProtocol(const char*);
 
-static swi_mangoh_data_router_t dataRouter;
+
+static bool IsUpdateHandlerForSession(le_sls_Link_t* link)
+{
+    swi_mangoh_data_router_dataUpdateHandler_t* node = CONTAINER_OF(
+        link, swi_mangoh_data_router_dataUpdateHandler_t, next);
+    return node->clientSessionRef == ComparisonClientSessionRef;
+}
+
+static void FreeDataUpdateHandlerListNode(le_sls_Link_t* link)
+{
+    swi_mangoh_data_router_dataUpdateHandler_t* node = CONTAINER_OF(
+        link, swi_mangoh_data_router_dataUpdateHandler_t, next);
+    free(node);
+}
 
 static void swi_mangoh_data_router_SigTermEventHandler(int sigNum)
 {
+  LE_INFO("Data router persistence started");
   swi_mangoh_data_router_db_destroy(&dataRouter.db);
+  LE_INFO("Data router persistence completed");
 }
 
-static le_result_t swi_mangoh_data_router_getSessionAppId(
+static le_result_t swi_mangoh_data_router_getSessionPidAndAppName(
   le_msg_SessionRef_t sessionRef,
+  pid_t* pid,
   char appName[],
   size_t len
 )
 {
-  pid_t processId = {0};
   le_result_t res = LE_OK;
 
-  res = le_msg_GetClientProcessId(sessionRef, &processId);
+  res = le_msg_GetClientProcessId(sessionRef, pid);
   if (res != LE_OK)
   {
     LE_ERROR("ERROR le_msg_GetClientProcessId() failed(%d)", res);
     goto cleanup;
   }
 
-  LE_DEBUG("process(%u), len(%u)", processId, len);
-  res = le_appInfo_GetName(processId, appName, len);
+  LE_DEBUG("process(%u), len(%u)", *pid, len);
+  res = le_appInfo_GetName(*pid, appName, len);
   if (res != LE_OK)
   {
-    LE_ERROR("ERROR le_appInfo_GetName() failed(%d)", res);
-    goto cleanup;
+    // ensure that the string is empty
+    appName[0] = '\0';
+    res = LE_OK;
   }
 
   LE_DEBUG("app name('%s')", appName);
@@ -43,9 +67,11 @@ cleanup:
   return res;
 }
 
-static le_result_t swi_mangoh_data_router_getClientAppId(char appName[], size_t len)
+static le_result_t swi_mangoh_data_router_getClientPidAndAppName(
+    pid_t* pid, char appName[], size_t len)
 {
-    return swi_mangoh_data_router_getSessionAppId(dataRouter_GetClientSessionRef(), appName, len);
+    return swi_mangoh_data_router_getSessionPidAndAppName(
+        dataRouter_GetClientSessionRef(), pid, appName, len);
 }
 
 static void swi_mangoh_data_router_selectAvProtocol(const char* value)
@@ -65,54 +91,48 @@ static void swi_mangoh_data_router_selectAvProtocol(const char* value)
   }
 }
 
-void swi_mangoh_data_router_notifySubscribers(const char* appId, const swi_mangoh_data_router_dbItem_t* dbItem)
+void swi_mangoh_data_router_notifySubscribers(const char* key, const swi_mangoh_data_router_dbItem_t* dbItem)
 {
-  LE_ASSERT(appId);
+  LE_ASSERT(key);
   LE_ASSERT(dbItem);
 
-  LE_DEBUG("application ID('%s')", appId);
-
-  le_sls_Link_t* linkPtr = le_sls_Peek(&dbItem->subscribers);
-  while (linkPtr)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  for (le_sls_Link_t* nodePtr = le_sls_Peek(&dbItem->handlers);
+       nodePtr;
+       nodePtr = le_sls_PeekNext(&dbItem->handlers, nodePtr))
   {
-    swi_mangoh_data_router_subscriberLink_t* subscriberElem = CONTAINER_OF(linkPtr, swi_mangoh_data_router_subscriberLink_t, link);
+    swi_mangoh_data_router_dataUpdateHandler_t* handlerData = CONTAINER_OF(
+      nodePtr, swi_mangoh_data_router_dataUpdateHandler_t, next);
 
-    LE_DEBUG("subscriber('%s')", subscriberElem->subscriber->appId);
-    if (strcmp(subscriberElem->subscriber->appId, appId))
+    // notify all other clients
+    if (handlerData->clientSessionRef != clientSession)
     {
-      swi_mangoh_data_router_dataUpdateHndlr_t* dataUpdateHndlr = le_hashmap_Get(subscriberElem->subscriber->dataUpdateHndlrs, dbItem->data.key);
-      if (dataUpdateHndlr)
-      {
-        LE_DEBUG("subscriber('%s') data update handler key('%s')", subscriberElem->subscriber->appId, dbItem->data.key);
-        dataUpdateHndlr->handler(dbItem->data.type, dbItem->data.key, dataUpdateHndlr->context);
-      }
-      else
-      {
-        LE_DEBUG("subscriber('%s') NO data update handler key('%s')", subscriberElem->subscriber->appId, dbItem->data.key);
-      }
+        LE_DEBUG("Calling update handler for key (%s) on client (%p)", key, clientSession);
+        LE_ASSERT(handlerData->handler);
+        handlerData->handler(dbItem->data.type, key, handlerData->context);
     }
-
-    linkPtr = le_sls_PeekNext(&dbItem->subscribers, linkPtr);
   }
 }
 
-void dataRouter_SessionStart(const char* urlAsset, const char* password, uint8_t pushAv, dataRouter_Storage_t storage)
+void dataRouter_SessionStart(const char* urlAsset, const char* password, bool pushAv, dataRouter_Storage_t storage)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
   LE_ASSERT(urlAsset);
   LE_ASSERT(password);
 
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+
+  // Get app name and pid for display purposes
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN] = {0};
+  pid_t pid = 0;
+  le_result_t res = swi_mangoh_data_router_getClientPidAndAppName(&pid, appName, sizeof(appName));
   if (res != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("ERROR swi_mangoh_data_router_getClientPidAndAppName() failed(%d)", res);
     goto cleanup;
   }
 
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (!session)
   {
     session = calloc(1, sizeof(swi_mangoh_data_router_session_t));
@@ -122,7 +142,6 @@ void dataRouter_SessionStart(const char* urlAsset, const char* password, uint8_t
       goto cleanup;
     }
 
-    strcpy(session->appId, appName);
     session->pushAv = pushAv;
     session->storageType = storage;
 
@@ -147,35 +166,82 @@ void dataRouter_SessionStart(const char* urlAsset, const char* password, uint8_t
       }
     }
 
-    if (le_hashmap_Put(dataRouter.sessions, session->appId, session))
+    if (le_hashmap_Put(dataRouter.sessions, clientSession, session))
     {
       LE_ERROR("le_hashmap_Put() failed");
       goto cleanup;
     }
 
-    LE_DEBUG("added session('%s')", appName);
+    LE_DEBUG("added session('%p')", clientSession);
   }
   else
   {
-    LE_WARN("session('%s') exists", appName);
+    LE_WARN(
+        "data router session already exists for client session ('%p') established by app %s from pid %u",
+        clientSession,
+        appName,
+        pid);
   }
 
 cleanup:
   return;
 }
 
-static void swi_mangoh_data_router_cleanupSession(const char* appName)
+static void swi_mangoh_data_router_removeAllUpdateHandlersForSession(
+  swi_mangoh_data_router_db_t* db,
+  le_msg_SessionRef_t sessionRef
+)
 {
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
-  if (session && session->pushAv)
+  // Iterate over all of the dbItems in db->database.  We don't care which key is associated with
+  // the item.
+  le_hashmap_It_Ref_t iter = le_hashmap_GetIterator(db->database);
+  ComparisonClientSessionRef = sessionRef;
+  while (le_hashmap_NextNode(iter))
   {
-    switch (dataRouter.protocolType)
+    swi_mangoh_data_router_dbItem_t* dbItem =
+      (swi_mangoh_data_router_dbItem_t*)le_hashmap_GetValue(iter);
+    LE_ASSERT(dbItem);
+
+    ListRemoveFirstMatch(
+        &dbItem->handlers,
+        &IsUpdateHandlerForSession,
+        &FreeDataUpdateHandlerListNode);
+  }
+}
+
+static void swi_mangoh_data_router_cleanupSession(le_msg_SessionRef_t clientSession)
+{
+  LE_DEBUG("Cleaning up session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
+  if (session)
+  {
+    if (session->pushAv)
     {
-    case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-      if (swi_mangoh_data_router_mqttSessionEnd(&session->mqtt))
+      switch (dataRouter.protocolType)
       {
-        if (!le_hashmap_Remove(dataRouter.sessions, appName))
+      case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
+        if (swi_mangoh_data_router_mqttSessionEnd(&session->mqtt))
+        {
+          if (!le_hashmap_Remove(dataRouter.sessions, clientSession))
+          {
+            LE_ERROR("ERROR le_hashmap_Remove() failed");
+            free(session);
+            goto cleanup;
+          }
+
+          free(session);
+        }
+        else
+        {
+            // TODO: it seems like the session will never be removed from the hashmap in this case.
+            // This is a memory leak.
+        }
+        break;
+
+      case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
+        swi_mangoh_data_router_avSvcSessionEnd(&session->avsvc);
+
+        if (!le_hashmap_Remove(dataRouter.sessions, clientSession))
         {
           LE_ERROR("ERROR le_hashmap_Remove() failed");
           free(session);
@@ -183,35 +249,33 @@ static void swi_mangoh_data_router_cleanupSession(const char* appName)
         }
 
         free(session);
+        break;
+
+      case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
+        break;
+
+      default:
+        LE_WARN("unsupported protocol(%u)", dataRouter.protocolType);
+        break;
       }
-
-      break;
-
-    case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-      swi_mangoh_data_router_avSvcSessionEnd(&session->avsvc);
-
-      if (!le_hashmap_Remove(dataRouter.sessions, appName))
+    }
+    else
+    {
+      if (!le_hashmap_Remove(dataRouter.sessions, clientSession))
       {
         LE_ERROR("ERROR le_hashmap_Remove() failed");
         free(session);
         goto cleanup;
       }
-
-      free(session);
-      break;
-
-    case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
-      break;
-
-    default:
-      LE_WARN("unsupported protocol(%u)", dataRouter.protocolType);
-      break;
     }
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("session('%p') not found", clientSession);
   }
+
+  // Make sure that all of the update handlers are removed
+  swi_mangoh_data_router_removeAllUpdateHandlersForSession(&dataRouter.db, clientSession);
 
 cleanup:
 
@@ -221,57 +285,37 @@ cleanup:
 static void swi_mangoh_data_router_onSessionClosed(
   le_msg_SessionRef_t sessionRef, void* contextPtr)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  res = swi_mangoh_data_router_getSessionAppId(sessionRef, appName, sizeof(appName));
-  if (res != LE_OK)
-  {
-    LE_ERROR("ERROR swi_mangoh_data_router_getSessionAppId() failed(%d)", res);
-  }
-  else
-  {
-    swi_mangoh_data_router_cleanupSession(appName);
-  }
+  swi_mangoh_data_router_cleanupSession(sessionRef);
 }
 
 void dataRouter_SessionEnd(void)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
-  {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
-    goto cleanup;
-  }
-
-  swi_mangoh_data_router_cleanupSession(appName);
-
-cleanup:
-  return;
+  swi_mangoh_data_router_cleanupSession(dataRouter_GetClientSessionRef());
 }
 
 void dataRouter_WriteBoolean(const char* key, bool value, uint32_t timestamp)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
-    LE_DEBUG("app('%s') --> key('%s'), value(%d), timestamp(%u)", appName, key, value, timestamp);
+    LE_DEBUG(
+        "app(%s)/pid(%u)/session(%p) --> key(%s) = value(%d), timestamp(%u)",
+        appName,
+        pid,
+        clientSession,
+        key,
+        value,
+        timestamp);
 
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (!dbItem)
@@ -293,12 +337,12 @@ void dataRouter_WriteBoolean(const char* key, bool value, uint32_t timestamp)
     {
       switch (dataRouter.protocolType)
       {
-        case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-        swi_mangoh_data_router_mqttWrite(dbItem, &session->mqtt);
+      case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
+        swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-        swi_mangoh_data_router_avSvcWrite(dbItem, &session->avsvc);
+        swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
@@ -310,11 +354,11 @@ void dataRouter_WriteBoolean(const char* key, bool value, uint32_t timestamp)
       }
     }
 
-    swi_mangoh_data_router_notifySubscribers(appName, dbItem);
+    swi_mangoh_data_router_notifySubscribers(key, dbItem);
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -323,23 +367,27 @@ cleanup:
 
 void dataRouter_WriteInteger(const char* key, int32_t value, uint32_t timestamp)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
-    LE_DEBUG("app('%s') --> key('%s'), value(%d), timestamp(%u)", appName, key, value, timestamp);
+    LE_DEBUG(
+        "app(%s)/pid(%u)/session(%p) --> key(%s) = value(%d), timestamp(%u)",
+        appName,
+        pid,
+        clientSession,
+        key,
+        value,
+        timestamp);
 
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (!dbItem)
@@ -362,11 +410,11 @@ void dataRouter_WriteInteger(const char* key, int32_t value, uint32_t timestamp)
       switch (dataRouter.protocolType)
       {
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-        swi_mangoh_data_router_mqttWrite(dbItem, &session->mqtt);
+        swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-        swi_mangoh_data_router_avSvcWrite(dbItem, &session->avsvc);
+        swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
@@ -378,11 +426,11 @@ void dataRouter_WriteInteger(const char* key, int32_t value, uint32_t timestamp)
       }
     }
 
-    swi_mangoh_data_router_notifySubscribers(appName, dbItem);
+    swi_mangoh_data_router_notifySubscribers(key, dbItem);
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -391,23 +439,27 @@ cleanup:
 
 void dataRouter_WriteFloat(const char* key, float value, uint32_t timestamp)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
-    LE_DEBUG("app('%s') --> key('%s'), value(%f), timestamp(%u)", appName, key, value, timestamp);
+    LE_DEBUG(
+        "app(%s)/pid(%u)/session(%p) --> key(%s) = value(%f), timestamp(%u)",
+        appName,
+        pid,
+        clientSession,
+        key,
+        value,
+        timestamp);
 
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (!dbItem)
@@ -430,11 +482,11 @@ void dataRouter_WriteFloat(const char* key, float value, uint32_t timestamp)
       switch (dataRouter.protocolType)
       {
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-        swi_mangoh_data_router_mqttWrite(dbItem, &session->mqtt);
+        swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-        swi_mangoh_data_router_avSvcWrite(dbItem, &session->avsvc);
+        swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
@@ -446,11 +498,11 @@ void dataRouter_WriteFloat(const char* key, float value, uint32_t timestamp)
       }
     }
 
-    swi_mangoh_data_router_notifySubscribers(appName, dbItem);
+    swi_mangoh_data_router_notifySubscribers(key, dbItem);
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -459,24 +511,27 @@ cleanup:
 
 void dataRouter_WriteString(const char* key, const char* value, uint32_t timestamp)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-  LE_ASSERT(value);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
-    LE_DEBUG("app('%s') --> key('%s'), value('%s'), timestamp(%u)", appName, key, value, timestamp);
+    LE_DEBUG(
+        "app(%s)/pid(%u)/session(%p) --> key(%s) = value('%s'), timestamp(%u)",
+        appName,
+        pid,
+        clientSession,
+        key,
+        value,
+        timestamp);
 
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (!dbItem)
@@ -499,11 +554,11 @@ void dataRouter_WriteString(const char* key, const char* value, uint32_t timesta
       switch (dataRouter.protocolType)
       {
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-        swi_mangoh_data_router_mqttWrite(dbItem, &session->mqtt);
+        swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-        swi_mangoh_data_router_avSvcWrite(dbItem, &session->avsvc);
+        swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
         break;
 
       case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
@@ -515,11 +570,11 @@ void dataRouter_WriteString(const char* key, const char* value, uint32_t timesta
       }
     }
 
-    swi_mangoh_data_router_notifySubscribers(appName, dbItem);
+    swi_mangoh_data_router_notifySubscribers(key, dbItem);
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -528,20 +583,17 @@ cleanup:
 
 void dataRouter_ReadBoolean(const char* key, bool* valuePtr, uint32_t* timestampPtr)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
@@ -549,9 +601,16 @@ void dataRouter_ReadBoolean(const char* key, bool* valuePtr, uint32_t* timestamp
     {
       if (dbItem->data.type == DATAROUTER_BOOLEAN)
       {
-        memcpy(valuePtr, &dbItem->data.bValue, sizeof(dbItem->data.bValue));
-        memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
-        LE_DEBUG("app('%s') <-- key('%s'), value(%d), timestamp(%u)", appName, key, *valuePtr, *timestampPtr);
+        *valuePtr = dbItem->data.bValue;
+        *timestampPtr = dbItem->data.timestamp;
+        LE_DEBUG(
+            "app(%s)/pid(%u)/session(%p) <-- key(%s) = value(%u), timestamp(%u)",
+            appName,
+            pid,
+            clientSession,
+            key,
+            *valuePtr,
+            *timestampPtr);
       }
       else
       {
@@ -565,7 +624,7 @@ void dataRouter_ReadBoolean(const char* key, bool* valuePtr, uint32_t* timestamp
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -574,20 +633,17 @@ cleanup:
 
 void dataRouter_ReadInteger(const char* key, int32_t* valuePtr, uint32_t* timestampPtr)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
@@ -595,9 +651,16 @@ void dataRouter_ReadInteger(const char* key, int32_t* valuePtr, uint32_t* timest
     {
       if (dbItem->data.type == DATAROUTER_INTEGER)
       {
-        memcpy(valuePtr, &dbItem->data.iValue, sizeof(dbItem->data.iValue));
-        memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
-        LE_DEBUG("app('%s') <-- key('%s'), value(%d), timestamp(%u)", appName, key, *valuePtr, *timestampPtr);
+        *valuePtr = dbItem->data.iValue;
+        *timestampPtr = dbItem->data.timestamp;
+        LE_DEBUG(
+            "app(%s)/pid(%u)/session(%p) <-- key(%s) = value(%d), timestamp(%u)",
+            appName,
+            pid,
+            clientSession,
+            key,
+            *valuePtr,
+            *timestampPtr);
       }
       else
       {
@@ -611,7 +674,7 @@ void dataRouter_ReadInteger(const char* key, int32_t* valuePtr, uint32_t* timest
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -620,20 +683,17 @@ cleanup:
 
 void dataRouter_ReadFloat(const char* key, float* valuePtr, uint32_t* timestampPtr)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
@@ -642,8 +702,15 @@ void dataRouter_ReadFloat(const char* key, float* valuePtr, uint32_t* timestampP
       if (dbItem->data.type == DATAROUTER_FLOAT)
       {
         *valuePtr = dbItem->data.fValue;
-        memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
-        LE_DEBUG("app('%s') <-- key('%s'), value(%f), timestamp(%u)", appName, key, *valuePtr, *timestampPtr);
+        *timestampPtr = dbItem->data.timestamp;
+        LE_DEBUG(
+            "app(%s)/pid(%u)/session(%p) <-- key(%s) = value(%f), timestamp(%u)",
+            appName,
+            pid,
+            clientSession,
+            key,
+            *valuePtr,
+            *timestampPtr);
       }
       else
       {
@@ -657,7 +724,7 @@ void dataRouter_ReadFloat(const char* key, float* valuePtr, uint32_t* timestampP
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -666,20 +733,17 @@ cleanup:
 
 void dataRouter_ReadString(const char* key, char* valuePtr, size_t numValues, uint32_t* timestampPtr)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  LE_ASSERT(key);
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
@@ -688,10 +752,16 @@ void dataRouter_ReadString(const char* key, char* valuePtr, size_t numValues, ui
       if (dbItem->data.type == DATAROUTER_STRING)
       {
         memset(valuePtr, 0, numValues);
-        strcpy(valuePtr, dbItem->data.sValue);
-
-        memcpy(timestampPtr, &dbItem->data.timestamp, sizeof(dbItem->data.timestamp));
-        LE_DEBUG("app('%s') <-- key('%s'), value('%s'), timestamp(%u)", appName, key, valuePtr, *timestampPtr);
+        strncpy(valuePtr, dbItem->data.sValue, numValues - 1);
+        *timestampPtr = dbItem->data.timestamp;
+        LE_DEBUG(
+            "app(%s)/pid(%u)/session(%p) <-- key(%s) = value('%s'), timestamp(%u)",
+            appName,
+            pid,
+            clientSession,
+            key,
+            valuePtr,
+            *timestampPtr);
       }
       else
       {
@@ -705,7 +775,7 @@ void dataRouter_ReadString(const char* key, char* valuePtr, size_t numValues, ui
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
@@ -714,23 +784,26 @@ cleanup:
 
 dataRouter_DataUpdateHandlerRef_t dataRouter_AddDataUpdateHandler(const char* key, dataRouter_DataUpdateHandlerFunc_t handlerPtr, void* contextPtr)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  swi_mangoh_data_router_subscriber_t* subscriber = NULL;
-  swi_mangoh_data_router_dataUpdateHndlr_t* dataUpdateHndlr = NULL;
-  le_result_t res = LE_OK;
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  dataRouter_DataUpdateHandlerRef_t updateHandlerRef = NULL;
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
-    LE_DEBUG("appId('%s') register handler('%s')", appName, key);
+    LE_DEBUG(
+      "app(%s)/pid(%u)/session(%p): register handler on key(%s)",
+      appName,
+      pid,
+      clientSession,
+      key);
     swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, key);
     if (!dbItem)
     {
@@ -742,138 +815,87 @@ dataRouter_DataUpdateHandlerRef_t dataRouter_AddDataUpdateHandler(const char* ke
       }
     }
 
-    le_sls_Link_t* linkPtr = le_sls_Peek(&dbItem->subscribers);
+    le_sls_Link_t* linkPtr = le_sls_Peek(&dbItem->handlers);
     while (linkPtr)
     {
-      swi_mangoh_data_router_subscriberLink_t* subscriberElem = CONTAINER_OF(linkPtr, swi_mangoh_data_router_subscriberLink_t, link);
+      swi_mangoh_data_router_dataUpdateHandler_t* handlerElem =
+        CONTAINER_OF(linkPtr, swi_mangoh_data_router_dataUpdateHandler_t, next);
 
-      if (!strcmp(subscriberElem->subscriber->appId, appName))
+      if (handlerElem->clientSessionRef == clientSession)
       {
-        subscriber = subscriberElem->subscriber;
+        LE_WARN(
+            "app(%s)/pid(%u)/session(%p) already has a handler for key(%s)",
+            appName,
+            pid,
+            clientSession,
+            key);
         break;
       }
 
-      linkPtr = le_sls_PeekNext(&dbItem->subscribers, linkPtr);
+      linkPtr = le_sls_PeekNext(&dbItem->handlers, linkPtr);
     }
 
-    if (!linkPtr)
+    if (linkPtr == NULL)
     {
-      subscriber = calloc(1, sizeof(swi_mangoh_data_router_subscriber_t));
-      if (!subscriber)
-      {
-        LE_ERROR("ERROR calloc() failed");
-        goto cleanup;
-      }
+      // No handler exists for key
+      swi_mangoh_data_router_dataUpdateHandler_t* newHandlerNode =
+        malloc(sizeof(swi_mangoh_data_router_dataUpdateHandler_t));
+      LE_ASSERT(newHandlerNode);
+      newHandlerNode->next = LE_SLS_LINK_INIT;
+      newHandlerNode->dbItemInstalledOn = dbItem;
+      newHandlerNode->clientSessionRef = clientSession;
+      newHandlerNode->handler = handlerPtr;
+      newHandlerNode->context = contextPtr;
+      le_sls_Stack(&dbItem->handlers, &newHandlerNode->next);
 
-      subscriber->dataUpdateHndlrs = le_hashmap_Create(SWI_MANGOH_DATA_ROUTER_DATA_HANDLERS_MAP_NAME, SWI_MANGOH_DATA_ROUTER_DATA_HANDLERS_MAP_SIZE, le_hashmap_HashString, le_hashmap_EqualsString);
-      strcpy(subscriber->appId, appName);
-
-      swi_mangoh_data_router_subscriberLink_t* subscriberElem = calloc(1, sizeof(swi_mangoh_data_router_subscriberLink_t));
-      if (!subscriberElem)
-      {
-        LE_ERROR("ERROR calloc() failed");
-        free(subscriber);
-        goto cleanup;
-      }
-
-      LE_DEBUG("key('%s') add subscriber('%s')", key, appName);
-      subscriberElem->link = LE_SLS_LINK_INIT;
-      subscriberElem->subscriber = subscriber;
-      le_sls_Queue(&dbItem->subscribers, &subscriberElem->link);
-    }
-
-    dataUpdateHndlr = le_hashmap_Get(subscriber->dataUpdateHndlrs, key);
-    if (!dataUpdateHndlr)
-    {
-      dataUpdateHndlr = calloc(1, sizeof(swi_mangoh_data_router_dataUpdateHndlr_t));
-      if (!dataUpdateHndlr)
-      {
-        LE_ERROR("ERROR calloc() failed");
-        goto cleanup;
-      }
-
-      strcpy(dataUpdateHndlr->appId, appName);
-      strcpy(dataUpdateHndlr->key, key);
-      dataUpdateHndlr->handler = handlerPtr;
-      dataUpdateHndlr->context = contextPtr;
-
-      if (le_hashmap_Put(subscriber->dataUpdateHndlrs, dataUpdateHndlr->key, dataUpdateHndlr))
-      {
-        LE_ERROR("ERROR le_hashmap_Put() failed");
-        free(dataUpdateHndlr);
-        goto cleanup;
-      }
-    }
-    else
-    {
-      LE_WARN("data update handler('%s') exists", key);
+      updateHandlerRef = (dataRouter_DataUpdateHandlerRef_t)newHandlerNode;
     }
   }
   else
   {
-    LE_WARN("session('%s') not found", appName);
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
-  return (dataRouter_DataUpdateHandlerRef_t)(dataUpdateHndlr);
+    return updateHandlerRef;
 }
 
-void dataRouter_RemoveDataUpdateHandler(dataRouter_DataUpdateHandlerRef_t addHandlerRef)
+void dataRouter_RemoveDataUpdateHandler(dataRouter_DataUpdateHandlerRef_t updateHandlerRef)
 {
-  char appName[SWI_MANGOH_DATA_ROUTER_APP_ID_LEN] = {0};
-  le_result_t res = LE_OK;
-
-  res = swi_mangoh_data_router_getClientAppId(appName, sizeof(appName));
-  if (res != LE_OK)
+  le_msg_SessionRef_t clientSession = dataRouter_GetClientSessionRef();
+  pid_t pid;
+  char appName[SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN];
+  if (swi_mangoh_data_router_getSessionPidAndAppName(
+      clientSession, &pid, appName, sizeof(appName)) != LE_OK)
   {
-    LE_ERROR("ERROR swi_mangoh_data_router_getClientAppId() failed(%d)", res);
+    LE_ERROR("Failed to get client information");
     goto cleanup;
   }
-
-  LE_DEBUG("lookup session('%s')", appName);
-  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, appName);
+  LE_DEBUG("lookup session('%p')", clientSession);
+  swi_mangoh_data_router_session_t* session = le_hashmap_Get(dataRouter.sessions, clientSession);
   if (session)
   {
-    swi_mangoh_data_router_dataUpdateHndlr_t* dataUpdateHndlr = (swi_mangoh_data_router_dataUpdateHndlr_t*)addHandlerRef;
-
-    LE_INFO("app('%s') --> unsubscribe key('%s')", appName, dataUpdateHndlr->key);
-    swi_mangoh_data_router_dbItem_t* dbItem = swi_mangoh_data_router_db_getDataItem(&dataRouter.db, dataUpdateHndlr->key);
-    if (dbItem)
-    {
-      le_sls_Link_t* linkPtr = le_sls_Peek(&dbItem->subscribers);
-      while (linkPtr)
-      {
-        swi_mangoh_data_router_subscriberLink_t* subscriberElem = CONTAINER_OF(linkPtr, swi_mangoh_data_router_subscriberLink_t, link);
-
-        if (!strcmp(subscriberElem->subscriber->appId, appName))
-        {
-          LE_DEBUG("key('%s') remove data handler", dataUpdateHndlr->key);
-          dataUpdateHndlr = le_hashmap_Remove(subscriberElem->subscriber->dataUpdateHndlrs, dataUpdateHndlr->key);
-
-          if (le_hashmap_isEmpty(subscriberElem->subscriber->dataUpdateHndlrs))
-          {
-            LE_DEBUG("key('%s') remove subscriber('%s')", dataUpdateHndlr->key, appName);
-            linkPtr = le_sls_Pop(&dbItem->subscribers);
-            free(subscriberElem->subscriber);
-            free(subscriberElem);
-          }
-
-          free(dataUpdateHndlr);
-          break;
-        }
-
-        linkPtr = le_sls_PeekNext(&dbItem->subscribers, linkPtr);
-      }
-    }
-    else
-    {
-      LE_WARN("key('%s') does not exist", dataUpdateHndlr->key);
-    }
+    swi_mangoh_data_router_dataUpdateHandler_t* dataUpdateHandlerNode =
+        (swi_mangoh_data_router_dataUpdateHandler_t*)updateHandlerRef;
+    // iterate over elements of dataUpdateHandlerNode->dbItemInstalledOn->handlers to identify and
+    // remove the node with the matching clientSession.  Unfortunately the C language doesn't
+    // support closures, so we have to set a global (ComparisonClientSessionRef) for use by
+    // IsUpdateHandlerForSession
+    ComparisonClientSessionRef = clientSession;
+    ListRemoveFirstMatch(
+        &dataUpdateHandlerNode->dbItemInstalledOn->handlers,
+        &IsUpdateHandlerForSession,
+        &FreeDataUpdateHandlerListNode);
+  }
+  else
+  {
+    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
   }
 
 cleanup:
   return;
 }
+
 
 COMPONENT_INIT
 {
@@ -887,8 +909,8 @@ COMPONENT_INIT
   dataRouter.sessions = le_hashmap_Create(
     SWI_MANGOH_DATA_ROUTER_SESSIONS_MAP_NAME,
     SWI_MANGOH_DATA_ROUTER_SESSIONS_MAP_SIZE,
-    le_hashmap_HashString,
-    le_hashmap_EqualsString);
+    le_hashmap_HashVoidPointer,
+    le_hashmap_EqualsVoidPointer);
   dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT;
 
   le_sig_Block(SIGTERM);

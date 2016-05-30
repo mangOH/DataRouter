@@ -23,22 +23,22 @@ static void swi_mangoh_data_router_avSvcFieldEventHandler(le_avdata_AssetInstanc
     {
     case DATAROUTER_BOOLEAN:
       le_avdata_GetBool(avsvc->assetInstanceRef, fieldName, &dbItem->data.bValue);
-      LE_DEBUG("--> key('%s'), value('%s')", dbItem->data.key, dbItem->data.bValue ? "true":"false");
+      LE_DEBUG("--> value('%s')", dbItem->data.bValue ? "true":"false");
       break;
 
     case DATAROUTER_INTEGER:
       le_avdata_GetInt(avsvc->assetInstanceRef, fieldName, &dbItem->data.iValue);
-      LE_DEBUG("--> key('%s'), value(%d)", dbItem->data.key, dbItem->data.iValue);
+      LE_DEBUG("--> value(%d)", dbItem->data.iValue);
       break;
 
     case DATAROUTER_FLOAT:
       le_avdata_GetFloat(avsvc->assetInstanceRef, fieldName, &dbItem->data.fValue);
-      LE_DEBUG("--> key('%s'), value(%f)", dbItem->data.key, dbItem->data.fValue);
+      LE_DEBUG("--> value(%f)", dbItem->data.fValue);
       break;
 
     case DATAROUTER_STRING:
       le_avdata_GetString(avsvc->assetInstanceRef, fieldName, dbItem->data.sValue, sizeof(dbItem->data.sValue));
-      LE_DEBUG("--> key('%s'), value('%s')", dbItem->data.key, dbItem->data.sValue);
+      LE_DEBUG("--> value('%s')", dbItem->data.sValue);
       break;
     }
   }
@@ -57,7 +57,7 @@ void swi_mangoh_data_router_avSvcSessionStart(const char* asset, swi_mangoh_data
       le_hashmap_HashString, le_hashmap_EqualsString);
 }
 
-void swi_mangoh_data_router_avSvcWrite(swi_mangoh_data_router_dbItem_t* dbItem, swi_mangoh_data_router_avsvc_t* avsvc)
+void swi_mangoh_data_router_avSvcWrite(const char* key, swi_mangoh_data_router_dbItem_t* dbItem, swi_mangoh_data_router_avsvc_t* avsvc)
 {
   LE_ASSERT(dbItem);
   LE_ASSERT(avsvc);
@@ -65,25 +65,25 @@ void swi_mangoh_data_router_avSvcWrite(swi_mangoh_data_router_dbItem_t* dbItem, 
   switch (dbItem->data.type)
   {
   case DATAROUTER_BOOLEAN:
-    LE_DEBUG("AVSVC <-- key('%s'), value('%s'), timestamp(%lu)", dbItem->data.key, dbItem->data.bValue ? "true":"false", dbItem->data.timestamp);
-    le_avdata_SetBool(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.bValue);
+    LE_DEBUG("AVSVC <-- key('%s'), value('%s'), timestamp(%lu)", key, dbItem->data.bValue ? "true":"false", dbItem->data.timestamp);
+    le_avdata_SetBool(avsvc->assetInstanceRef, key, dbItem->data.bValue);
     break;
 
   case DATAROUTER_INTEGER:
-    LE_DEBUG("AVSVC <-- key('%s'), value(%d), timestamp(%lu)", dbItem->data.key, dbItem->data.iValue, dbItem->data.timestamp);
-    le_avdata_SetInt(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.iValue);
+    LE_DEBUG("AVSVC <-- key('%s'), value(%d), timestamp(%lu)", key, dbItem->data.iValue, dbItem->data.timestamp);
+    le_avdata_SetInt(avsvc->assetInstanceRef, key, dbItem->data.iValue);
 
   case DATAROUTER_FLOAT:
-    LE_DEBUG("AVSVC <-- key('%s'), value(%f), timestamp(%lu)", dbItem->data.key, dbItem->data.fValue, dbItem->data.timestamp);
-    le_avdata_SetFloat(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.fValue);
+    LE_DEBUG("AVSVC <-- key('%s'), value(%f), timestamp(%lu)", key, dbItem->data.fValue, dbItem->data.timestamp);
+    le_avdata_SetFloat(avsvc->assetInstanceRef, key, dbItem->data.fValue);
 
   case DATAROUTER_STRING:
-    LE_DEBUG("AVSVC <-- key('%s'), value('%s'), timestamp(%lu)", dbItem->data.key, dbItem->data.sValue, dbItem->data.timestamp);
-    le_avdata_SetString(avsvc->assetInstanceRef, dbItem->data.key, dbItem->data.sValue);
+    LE_DEBUG("AVSVC <-- key('%s'), value('%s'), timestamp(%lu)", key, dbItem->data.sValue, dbItem->data.timestamp);
+    le_avdata_SetString(avsvc->assetInstanceRef, key, dbItem->data.sValue);
     break;
   }
 
-  swi_mangoh_data_router_avSvcFieldEventUpdateHndlr_t* fieldEventHandler = le_hashmap_Get(avsvc->fieldEventHndlrs, dbItem->data.key);
+  swi_mangoh_data_router_avSvcFieldEventUpdateHndlr_t* fieldEventHandler = le_hashmap_Get(avsvc->fieldEventHndlrs, key);
   if (!fieldEventHandler)
   {
     fieldEventHandler = calloc(1, sizeof(swi_mangoh_data_router_avSvcFieldEventUpdateHndlr_t));
@@ -93,17 +93,16 @@ void swi_mangoh_data_router_avSvcWrite(swi_mangoh_data_router_dbItem_t* dbItem, 
       goto cleanup;
     }
 
-    fieldEventHandler->handlerRef = le_avdata_AddFieldEventHandler(avsvc->assetInstanceRef, dbItem->data.key, swi_mangoh_data_router_avSvcFieldEventHandler, avsvc);
+    fieldEventHandler->handlerRef = le_avdata_AddFieldEventHandler(avsvc->assetInstanceRef, key, swi_mangoh_data_router_avSvcFieldEventHandler, avsvc);
     if (!fieldEventHandler->handlerRef)
     {
       LE_ERROR("ERROR le_avdata_AddFieldEventHandler() failed");
       goto cleanup;
     }
 
-    strcpy(fieldEventHandler->key, dbItem->data.key);
     fieldEventHandler->context = avsvc;
 
-    if (le_hashmap_Put(avsvc->fieldEventHndlrs, fieldEventHandler->key, fieldEventHandler))
+    if (le_hashmap_Put(avsvc->fieldEventHndlrs, key, fieldEventHandler))
     {
       LE_ERROR("le_hashmap_Put() failed");
       goto cleanup;
