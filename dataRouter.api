@@ -32,7 +32,7 @@ FUNCTION SessionStart
 (
     string      url[128] IN,        ///< Air Vantage URL
     string      password[128] IN,   ///< Air Vantage application model password
-    uint8       pushAv,             ///< Air Vantage push flag
+    bool        pushAv,             ///< Air Vantage push flag
     Storage     storage             ///< Data persist storage
 );
 

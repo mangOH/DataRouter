@@ -34,8 +34,9 @@
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_mqtt_dataLink_t
 {
-  swi_mangoh_data_router_data_t*        data;                                               ///< Element data
-  le_sls_Link_t                         link;                                               ///< Linked list link to next element
+  char                          key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN]; ///< Key associated with the data
+  swi_mangoh_data_router_data_t data;                                    ///< Element data
+  le_sls_Link_t                 link;                                    ///< Linked list link to next element
 } swi_mangoh_data_router_mqtt_dataLink_t;
 
 //------------------------------------------------------------------------------------------------------------------
@@ -60,6 +61,6 @@ typedef struct _swi_mangoh_data_router_mqtt_t
 void swi_mangoh_data_router_mqttReconnect(le_timer_Ref_t);
 void swi_mangoh_data_router_mqttSessionStart(const char*, const char*, const char*, swi_mangoh_data_router_mqtt_t*, swi_mangoh_data_router_db_t*);
 bool swi_mangoh_data_router_mqttSessionEnd(swi_mangoh_data_router_mqtt_t*);
-void swi_mangoh_data_router_mqttWrite(swi_mangoh_data_router_dbItem_t*, swi_mangoh_data_router_mqtt_t*);
+void swi_mangoh_data_router_mqttWrite(const char* key, swi_mangoh_data_router_dbItem_t*, swi_mangoh_data_router_mqtt_t*);
 
 #endif

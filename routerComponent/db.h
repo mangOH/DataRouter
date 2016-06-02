@@ -29,7 +29,7 @@
 #define SWI_MANGOH_DATA_ROUTER_DB_MAP_NAME                  "WorkflowMgrDB"
 #define SWI_MANGOH_DATA_ROUTER_DB_MAP_SIZE                  63
 
-#define SWI_MANGOH_DATA_ROUTER_APP_ID_LEN                   64
+#define SWI_MANGOH_DATA_ROUTER_APP_NAME_LEN                 64
 #define SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN                  128
 #define SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN                 128
 
@@ -41,7 +41,6 @@
 typedef struct _swi_mangoh_data_router_data_t
 {
   dataRouter_DataType_t                 type;                                               ///< Data type
-  char                                  key[SWI_MANGOH_DATA_ROUTER_KEY_MAX_LEN];            ///< Data key
   union {
     char                                sValue[SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN];        ///< Data string value
     double                              fValue;
@@ -58,9 +57,9 @@ typedef struct _swi_mangoh_data_router_data_t
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_dbItem_t
 {
-  swi_mangoh_data_router_data_t         data;                                               ///< Data value
-  le_sls_List_t                         subscribers;                                        ///< Data update subscribers
-  dataRouter_Storage_t                  storageType;                                        ///< Data storage
+  swi_mangoh_data_router_data_t data;        ///< Data value
+  le_sls_List_t                 handlers;    ///< Data update handlers :: swi_mangoh_data_router_dataUpdateHandler_t
+  dataRouter_Storage_t          storageType; ///< Data storage
 } swi_mangoh_data_router_dbItem_t;
 
 //------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,18 @@
+requires:
+{
+    api:
+    {
+        ${MANGOH_ROOT}/apps/DataRouter/dataRouter.api
+    }
+}
+
+cflags:
+{
+    "-std=c99"
+}
+
+sources:
+{
+    main.c
+}
+
