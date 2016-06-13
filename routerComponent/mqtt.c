@@ -211,7 +211,7 @@ void swi_mangoh_data_router_mqttWrite(const char* key, swi_mangoh_data_router_db
     switch (dbItem->data.type)
     {
     case DATAROUTER_BOOLEAN:
-      snprintf(value, sizeof(value), "%d", dbItem->data.bValue);
+      strcpy(value, dbItem->data.bValue ? "true" : "false");
       break;
 
     case DATAROUTER_INTEGER:
