@@ -69,7 +69,7 @@ typedef struct _swi_mangoh_data_router_dbItem_t
 //------------------------------------------------------------------------------------------------------------------
 typedef struct _swi_mangoh_data_router_db_t
 {
-  le_hashmap_Ref_t                      database;                                           ///< Data cache
+  le_hashmap_Ref_t                      database; ///< Data cache: key :: string, value :: swi_mangoh_data_router_dbItem_t
 } swi_mangoh_data_router_db_t;
 
 swi_mangoh_data_router_dbItem_t* swi_mangoh_data_router_db_getDataItem(swi_mangoh_data_router_db_t*, const char*);

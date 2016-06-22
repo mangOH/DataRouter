@@ -38,7 +38,7 @@ static size_t ListRemoveGeneral(
 
     // Remove the head (if it matches) repeatedly until it doesn't match or the list is empty
     for (prevNode = le_sls_Peek(ls);
-         prevNode == NULL || !matchFn(prevNode);
+         prevNode != NULL && matchFn(prevNode);
          prevNode = le_sls_Peek(ls))
     {
         le_sls_Pop(ls);

@@ -196,7 +196,7 @@ static void swi_mangoh_data_router_removeAllUpdateHandlersForSession(
   // the item.
   le_hashmap_It_Ref_t iter = le_hashmap_GetIterator(db->database);
   ComparisonClientSessionRef = sessionRef;
-  while (le_hashmap_NextNode(iter))
+  while (le_hashmap_NextNode(iter) == LE_OK)
   {
     swi_mangoh_data_router_dbItem_t* dbItem =
       (swi_mangoh_data_router_dbItem_t*)le_hashmap_GetValue(iter);
@@ -358,7 +358,11 @@ void dataRouter_WriteBoolean(const char* key, bool value, uint32_t timestamp)
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -430,7 +434,11 @@ void dataRouter_WriteInteger(const char* key, int32_t value, uint32_t timestamp)
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -502,7 +510,11 @@ void dataRouter_WriteFloat(const char* key, double value, uint32_t timestamp)
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -574,7 +586,11 @@ void dataRouter_WriteString(const char* key, const char* value, uint32_t timesta
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -624,7 +640,11 @@ void dataRouter_ReadBoolean(const char* key, bool* valuePtr, uint32_t* timestamp
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -674,7 +694,11 @@ void dataRouter_ReadInteger(const char* key, int32_t* valuePtr, uint32_t* timest
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -724,7 +748,11 @@ void dataRouter_ReadFloat(const char* key, double* valuePtr, uint32_t* timestamp
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -775,7 +803,11 @@ void dataRouter_ReadString(const char* key, char* valuePtr, size_t numValues, ui
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -853,7 +885,11 @@ dataRouter_DataUpdateHandlerRef_t dataRouter_AddDataUpdateHandler(const char* ke
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
@@ -889,7 +925,11 @@ void dataRouter_RemoveDataUpdateHandler(dataRouter_DataUpdateHandlerRef_t update
   }
   else
   {
-    LE_WARN("Session not found for app(%s)/pid(%u)/session(%p)", appName, pid, clientSession);
+    LE_ERROR(
+      "Session not found for app(%s)/pid(%u)/session(%p).  Call SessionStart() to create a session.",
+      appName,
+      pid,
+      clientSession);
   }
 
 cleanup:
