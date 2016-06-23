@@ -8,7 +8,9 @@ static size_t ListRemoveGeneral(
     bool stopOnFirstRemove);
 
 
-size_t ListFilter( le_sls_List_t* ls,
+size_t ListFilter
+(
+    le_sls_List_t* ls,
     ListMatchFn matchFn,
     CleanupFn cleanupFn
 )
@@ -16,7 +18,8 @@ size_t ListFilter( le_sls_List_t* ls,
     return ListRemoveGeneral(ls, matchFn, cleanupFn, false);
 }
 
-bool ListRemoveFirstMatch(
+bool ListRemoveFirstMatch
+(
     le_sls_List_t* ls,
     ListMatchFn matchFn,
     CleanupFn cleanupFn
@@ -25,20 +28,20 @@ bool ListRemoveFirstMatch(
     return (ListRemoveGeneral(ls, matchFn, cleanupFn, true) == 1);
 }
 
-static size_t ListRemoveGeneral(
+static size_t ListRemoveGeneral
+(
     le_sls_List_t* ls,
     ListMatchFn matchFn,
     CleanupFn cleanupFn,
     bool stopOnFirstRemove
 )
 {
-    size_t numRemoved = 0;
-    le_sls_Link_t* prevNode = NULL;
-    le_sls_Link_t* currNode = NULL;
+    size_t         numRemoved = 0;
+    le_sls_Link_t* prevNode   = NULL;
+    le_sls_Link_t* currNode   = NULL;
 
     // Remove the head (if it matches) repeatedly until it doesn't match or the list is empty
-    for (prevNode = le_sls_Peek(ls);
-         prevNode != NULL && matchFn(prevNode);
+    for (prevNode = le_sls_Peek(ls); prevNode != NULL && matchFn(prevNode);
          prevNode = le_sls_Peek(ls))
     {
         le_sls_Pop(ls);
@@ -54,8 +57,7 @@ static size_t ListRemoveGeneral(
     if (prevNode)
     {
         // The list isn't empty
-        for (currNode = le_sls_PeekNext(ls, prevNode);
-             currNode != NULL;
+        for (currNode = le_sls_PeekNext(ls, prevNode); currNode != NULL;
              prevNode = currNode, currNode = le_sls_PeekNext(ls, prevNode))
         {
             if (matchFn(currNode))
