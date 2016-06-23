@@ -69,7 +69,7 @@ void swi_mangoh_data_router_mqttSessionStart(
 bool swi_mangoh_data_router_mqttSessionEnd(swi_mangoh_data_router_mqtt_t*);
 void swi_mangoh_data_router_mqttWrite(
     const char* key,
-    swi_mangoh_data_router_dbItem_t*,
+    const swi_mangoh_data_router_dbItem_t*,
     swi_mangoh_data_router_mqtt_t*);
 
 #endif

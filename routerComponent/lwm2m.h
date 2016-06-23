@@ -52,7 +52,7 @@ void swi_mangoh_data_router_avSvcSessionStart(
 void swi_mangoh_data_router_avSvcSessionEnd(swi_mangoh_data_router_avsvc_t*);
 void swi_mangoh_data_router_avSvcWrite(
     const char* key,
-    swi_mangoh_data_router_dbItem_t* dbItem,
+    const swi_mangoh_data_router_dbItem_t* dbItem,
     swi_mangoh_data_router_avsvc_t*);
 
 #endif

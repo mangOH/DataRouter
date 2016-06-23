@@ -228,7 +228,7 @@ cleanup:
 
 void swi_mangoh_data_router_mqttWrite(
     const char*                      key,
-    swi_mangoh_data_router_dbItem_t* dbItem,
+    const swi_mangoh_data_router_dbItem_t* dbItem,
     swi_mangoh_data_router_mqtt_t*   mqtt)
 {
     LE_ASSERT(dbItem);

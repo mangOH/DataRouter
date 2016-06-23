@@ -13,6 +13,10 @@ static void FreeDataUpdateHandlerListNode(le_sls_Link_t* link);
 static void swi_mangoh_data_router_SigTermEventHandler(int);
 static le_result_t swi_mangoh_data_router_getClientPidAndAppName(pid_t*, char[], size_t);
 static void swi_mangoh_data_router_selectAvProtocol(const char*);
+static void pushItemIfRequired(
+    swi_mangoh_data_router_session_t* session,
+    const char* key,
+    const swi_mangoh_data_router_dbItem_t* dbItem);
 
 
 static bool IsUpdateHandlerForSession
@@ -378,26 +382,7 @@ void dataRouter_WriteBoolean
         swi_mangoh_data_router_db_setBooleanValue(dbItem, value);
         swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
 
-        if (session->pushAv)
-        {
-            switch (dataRouter.protocolType)
-            {
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-                    swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-                    swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
-                    break;
-
-                default:
-                    LE_WARN("unsupported protocol(%u)", dataRouter.protocolType);
-                    break;
-            }
-        }
+        pushItemIfRequired(session, key, dbItem);
 
         swi_mangoh_data_router_notifySubscribers(key, dbItem);
     }
@@ -461,26 +446,7 @@ void dataRouter_WriteInteger
         swi_mangoh_data_router_db_setIntegerValue(dbItem, value);
         swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
 
-        if (session->pushAv)
-        {
-            switch (dataRouter.protocolType)
-            {
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-                    swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-                    swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
-                    break;
-
-                default:
-                    LE_WARN("unsupported protocol(%u)", dataRouter.protocolType);
-                    break;
-            }
-        }
+        pushItemIfRequired(session, key, dbItem);
 
         swi_mangoh_data_router_notifySubscribers(key, dbItem);
     }
@@ -544,26 +510,7 @@ void dataRouter_WriteFloat
         swi_mangoh_data_router_db_setFloatValue(dbItem, value);
         swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
 
-        if (session->pushAv)
-        {
-            switch (dataRouter.protocolType)
-            {
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-                    swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-                    swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
-                    break;
-
-                default:
-                    LE_WARN("unsupported protocol(%u)", dataRouter.protocolType);
-                    break;
-            }
-        }
+        pushItemIfRequired(session, key, dbItem);
 
         swi_mangoh_data_router_notifySubscribers(key, dbItem);
     }
@@ -627,26 +574,7 @@ void dataRouter_WriteString
         swi_mangoh_data_router_db_setStringValue(dbItem, value);
         swi_mangoh_data_router_db_setTimestamp(dbItem, timestamp);
 
-        if (session->pushAv)
-        {
-            switch (dataRouter.protocolType)
-            {
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
-                    swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-                    swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
-                    break;
-
-                default:
-                    LE_WARN("unsupported protocol(%u)", dataRouter.protocolType);
-                    break;
-            }
-        }
+        pushItemIfRequired(session, key, dbItem);
 
         swi_mangoh_data_router_notifySubscribers(key, dbItem);
     }
@@ -1043,6 +971,41 @@ void dataRouter_RemoveDataUpdateHandler
 cleanup:
     return;
 }
+
+//--------------------------------------------------------------------------------------------------
+/**
+ * Push a key/dbItem pair to AirVantage if pushing to AirVantage is enabled
+ */
+//--------------------------------------------------------------------------------------------------
+static void pushItemIfRequired
+(
+    swi_mangoh_data_router_session_t* session,
+    const char* key,
+    const swi_mangoh_data_router_dbItem_t* dbItem
+)
+{
+    if (session->pushAv)
+    {
+        switch (dataRouter.protocolType)
+        {
+            case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
+                swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
+                break;
+
+            case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
+                swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
+                break;
+
+            case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
+                break;
+
+            default:
+                LE_ERROR("unsupported protocol(%u)", dataRouter.protocolType);
+                break;
+        }
+    }
+}
+
 
 
 COMPONENT_INIT
