@@ -90,7 +90,11 @@ static void swi_mangoh_data_router_mqttSessionStateHdlr(
             switch (dataElem->data.type)
             {
                 case DATAROUTER_BOOLEAN:
-                    snprintf(value, sizeof(value), "%d", dataElem->data.bValue);
+                    strncpy(
+                        value,
+                        dataElem->data.bValue ? "true" : "false",
+                        SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN);
+                    LE_ASSERT(value[SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN - 1] == '\0');
                     break;
 
                 case DATAROUTER_INTEGER:
@@ -242,7 +246,11 @@ void swi_mangoh_data_router_mqttWrite(
         switch (dbItem->data.type)
         {
             case DATAROUTER_BOOLEAN:
-                strcpy(value, dbItem->data.bValue ? "true" : "false");
+                strncpy(
+                    value,
+                    dbItem->data.bValue ? "true" : "false",
+                    SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN);
+                LE_ASSERT(value[SWI_MANGOH_DATA_ROUTER_DATA_MAX_LEN - 1] == '\0');
                 break;
 
             case DATAROUTER_INTEGER:
