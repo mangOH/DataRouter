@@ -325,6 +325,7 @@ static void swi_mangoh_data_router_onSessionClosed
     void* contextPtr
 )
 {
+    LE_DEBUG("dataRouter session closed due to client disconnect");
     swi_mangoh_data_router_cleanupSession(sessionRef);
 }
 
@@ -333,6 +334,7 @@ void dataRouter_SessionEnd
     void
 )
 {
+    LE_DEBUG("dataRouter session closed explicitly");
     swi_mangoh_data_router_cleanupSession(dataRouter_GetClientSessionRef());
 }
 
