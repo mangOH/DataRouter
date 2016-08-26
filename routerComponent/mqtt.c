@@ -56,7 +56,7 @@ static void swi_mangoh_data_router_mqttIncomingMsgHdlr(
 
     dbItem->data.timestamp = atoi(timestamp);
 
-    swi_mangoh_data_router_notifySubscribers(SWI_MANGOH_DATA_ROUTER_MQTT_APP_NAME, dbItem);
+    swi_mangoh_data_router_notifySubscribers(key, dbItem);
 
 cleanup:
     return;
