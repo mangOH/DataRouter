@@ -66,7 +66,7 @@ static le_result_t swi_mangoh_data_router_getSessionPidAndAppName
         goto cleanup;
     }
 
-    LE_DEBUG("process(%u), len(%u)", *pid, len);
+    LE_DEBUG("process(%u), len(%zu)", *pid, len);
     res = le_appInfo_GetName(*pid, appName, len);
     if (res != LE_OK)
     {
