@@ -1,3 +1,11 @@
+/**
+ * @file
+ *
+ * <HR>
+ *
+ * Copyright (C) Sierra Wireless, Inc. Use of this work is subject to license.
+ */
+
 #include "legato.h"
 #include "list_helpers.h"
 
