@@ -157,7 +157,7 @@ HANDLER DataUpdateHandler
 //--------------------------------------------------------------------------------------------------
 EVENT DataUpdate
 (
-    string      key[128] IN,        ///< Data key
-    handler     DataUpdateHandler   ///< Data update handler function
+    string            key[128] IN,        ///< Data key
+    DataUpdateHandler dataUpdateHandler   ///< Data update handler function
 );
 
