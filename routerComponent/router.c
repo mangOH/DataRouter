@@ -113,11 +113,6 @@ static void swi_mangoh_data_router_selectAvProtocol
         LE_DEBUG("AV protocol MQTT");
         dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT;
     }
-    else if (!strcmp(value, SWI_MANGOH_DATA_ROUTER_LWM2M_APP_NAME))
-    {
-        LE_DEBUG("AV protocol LWM2M");
-        dataRouter.protocolType = SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M;
-    }
 }
 
 void swi_mangoh_data_router_notifySubscribers
@@ -192,11 +187,6 @@ void dataRouter_SessionStart
                 case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
                     swi_mangoh_data_router_mqttSessionStart(
                         appName, urlAsset, password, &session->mqtt, &dataRouter.db);
-                    break;
-
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-                    swi_mangoh_data_router_avSvcSessionStart(
-                        urlAsset, &session->avsvc, &dataRouter.db);
                     break;
 
                 case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
@@ -283,18 +273,6 @@ static void swi_mangoh_data_router_cleanupSession
                     }
                     break;
 
-                case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-                    swi_mangoh_data_router_avSvcSessionEnd(&session->avsvc);
-
-                    if (!le_hashmap_Remove(dataRouter.sessions, clientSession))
-                    {
-                        LE_ERROR("ERROR le_hashmap_Remove() failed");
-                        free(session);
-                        goto cleanup;
-                    }
-
-                    free(session);
-                    break;
 
                 case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:
                     break;
@@ -1000,10 +978,6 @@ static void pushItemIfRequired
         {
             case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT:
                 swi_mangoh_data_router_mqttWrite(key, dbItem, &session->mqtt);
-                break;
-
-            case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M:
-                swi_mangoh_data_router_avSvcWrite(key, dbItem, &session->avsvc);
                 break;
 
             case SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE:

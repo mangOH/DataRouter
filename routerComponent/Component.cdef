@@ -3,7 +3,6 @@ sources:
     router.c
     db.c
     mqtt.c
-    lwm2m.c
     list_helpers.c
 }
 

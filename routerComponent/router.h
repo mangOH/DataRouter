@@ -12,7 +12,6 @@
 #include "legato.h"
 #include "interfaces.h"
 #include "db.h"
-#include "lwm2m.h"
 #include "mqtt.h"
 
 #ifndef SWI_MANGOH_DATA_ROUTER_INCLUDE_GUARD
@@ -30,7 +29,6 @@
 typedef enum _swi_mangoh_data_router_avProtocol_e {
     SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_NONE = 0,
     SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_MQTT,
-    SWI_MANGOH_DATA_ROUTER_AV_PROTOCOL_LWM2M,
 } swi_mangoh_data_router_avProtocol_e;
 
 //-------------------------------------------------------------------------------------------------
@@ -45,7 +43,6 @@ typedef struct _swi_mangoh_data_router_session_t
     union
     {
         swi_mangoh_data_router_mqtt_t  mqtt;   ///< MQTT protocol -> AV
-        swi_mangoh_data_router_avsvc_t avsvc;  ///< Air Vantage Serivce -> AV
     };
 } swi_mangoh_data_router_session_t;
 
