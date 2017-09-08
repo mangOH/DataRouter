@@ -10,7 +10,7 @@ provides:
 {
     api:
     {
-        $MANGOH_ROOT/apps/DataRouter/dataRouter.api
+        ${CURDIR}/../dataRouter.api
     }
 }
 
@@ -18,7 +18,7 @@ requires:
 {
     api:
     {
-        $MANGOH_ROOT/apps/MqttClient/mqtt.api
+        mqtt.api
         le_appInfo.api
         airVantage/le_avdata.api
         le_secStore.api
