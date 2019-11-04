@@ -994,7 +994,7 @@ static void pushItemIfRequired
 
 COMPONENT_INIT
 {
-    LE_INFO("MangOH Data Router Service Starting");
+    LE_INFO("mangOH Data Router Service Starting");
 
     swi_mangoh_data_router_db_init(&dataRouter.db);
 

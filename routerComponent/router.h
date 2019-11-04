@@ -3,7 +3,7 @@
  *
  * Data router module.
  *
- * This module is the main module for the MangOH data router.
+ * This module is the main module for the mangOH data router.
  *
  * <HR>
  *
